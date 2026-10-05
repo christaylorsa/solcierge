@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
+import { isCrossSiteWrite } from '@/lib/origin'
 
 /**
  * Keeps the Supabase Auth session alive for the email fallback.
@@ -12,6 +13,19 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
  * expiry and no refresh step.
  */
 export async function middleware(request: NextRequest) {
+  // CSRF backstop: refuse state-changing API calls the browser marks as cross-origin.
+  if (
+    request.nextUrl.pathname.startsWith('/api/') &&
+    isCrossSiteWrite({
+      method: request.method,
+      origin: request.headers.get('origin'),
+      host: request.headers.get('host') ?? request.nextUrl.host,
+      secFetchSite: request.headers.get('sec-fetch-site'),
+    })
+  ) {
+    return NextResponse.json({ error: 'Cross-site requests are not accepted.' }, { status: 403 })
+  }
+
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   if (!url || !key) return NextResponse.next()
