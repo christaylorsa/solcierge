@@ -7,6 +7,57 @@ Solana. Payments are verified against the ledger before anything is marked paid.
 This is a **request-and-fulfil** product, not a live-inventory marketplace. Nothing is listed,
 nothing is bid on, and no supplier sees a member's budget.
 
+**Live on Solana mainnet:** [solcierge.xyz](https://solcierge.xyz)
+
+---
+
+## Colosseum hackathon
+
+### What it is
+
+High-end concierge spend (charters, yachts, villas) is the kind of large, cross-border, time-critical
+payment that card rails handle worst: limits, holds, FX spreads, chargebacks a week after the jet has
+flown. Solcierge settles it in SOL or USDC, and treats the ledger, not the client, as the source of
+truth for whether a booking is paid.
+
+### Try it
+
+1. Open [solcierge.xyz](https://solcierge.xyz), pick a category, and connect Phantom or Solflare. You
+   sign a message, not a transaction: that is the whole account.
+2. Send a brief. For jets, the From and To fields search about 9,300 airports worldwide, including
+   business-aviation fields such as Teterboro, Le Bourget and Farnborough.
+3. The operator is alerted on Telegram, quotes in USD from the operator desk (`/admin`), and the
+   quote appears on the member's booking.
+4. The member accepts the terms and locks a rate: the server converts USD to SOL against Jupiter
+   (CoinGecko as fallback) and writes the exact amount down for ten minutes.
+5. The member pays. The server reads the transaction from the chain and checks the payer, the
+   recipient, the mint and the amount before the booking moves to `paid`. The operator gets a second
+   alert with the explorer link.
+
+The full request → quote → pay → verify flow has settled a real payment on mainnet.
+
+### Built during the hackathon
+
+The design, landing page, request flow and payment verifier existed before the hackathon and were
+disclosed as prior work. Taken from a local prototype that had never touched a real database to a
+live mainnet product during the hackathon:
+
+- **Production on mainnet:** Vercel deployment on solcierge.xyz, Supabase schema applied, and the
+  first real end-to-end payment verified on chain.
+- **Same-origin RPC proxy** (`src/app/api/rpc`): the browser's Solana connection goes through an
+  allow-listed server route, so the RPC provider key never ships to the client and the proxy cannot
+  be used as an open relay. Confirmation polls over HTTP instead of websockets.
+- **Worldwide airport search** for jet briefs (`src/lib/airports.ts`, built from OurAirports by
+  `scripts/build-airports.mjs`), with a one-way / return switch and Depart / Return dates.
+- **Operator alerts** over Telegram and email (`src/lib/notify.ts`) for new requests, payments and
+  payments that need manual review, sent with `after()` so they never slow a member down.
+- **Rate limiting:** per-member and site-wide caps on new requests.
+- **Pre-launch compliance pass:** terms acceptance recorded with each payment intent, air charter
+  broker disclosure (14 CFR 295), unverifiable marketing claims removed, payment records retained on
+  erasure via anonymisation, and server functions moved to Frankfurt next to the database.
+- **Fixes found in production:** a server crash from an ESM-only transitive dependency on Vercel's
+  runtime (pinned via `overrides`), and browser RPC calls that mainnet's public endpoint refuses.
+
 ---
 
 ## Stack
@@ -92,6 +143,8 @@ default:
 | `SOLANA_RPC_URL` | Server-side verification. Can be a private endpoint; it never reaches the browser. |
 | `ADMIN_WALLETS` | Comma-separated allowlist for `/admin`. Empty means nobody. |
 | `RATE_LOCK_SECONDS` | How long a pay-time rate holds. Default 600. |
+| `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_IDS` | Operator alerts on Telegram. Optional. |
+| `RESEND_API_KEY`, `ALERT_EMAILS`, `ALERT_FROM` | Operator alerts by email through Resend. Optional. |
 
 ---
 
@@ -300,8 +353,9 @@ node scripts/make-favicon.mjs   # regenerate public/icon.svg after a palette cha
    the real deployed origin, or magic-link redirects will bounce to localhost.
 3. In Supabase, add `https://your-domain/auth/callback` to the allowed redirect URLs.
 4. Switch `NEXT_PUBLIC_SOLANA_CLUSTER` to `mainnet-beta`, set the mainnet USDC mint
-   (`EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v`), and point both RPC variables at a paid
-   endpoint.
+   (`EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v`), and point `SOLANA_RPC_URL` at a paid
+   endpoint. Leave `NEXT_PUBLIC_SOLANA_RPC_URL` unset so the browser uses the `/api/rpc` proxy and
+   the provider key stays on the server.
 
 `/api/payments/verify` sets `maxDuration = 30`, since RPC round trips plus a retry can outlast
 the default budget on the Hobby tier.
@@ -312,12 +366,12 @@ the default budget on the Hobby tier.
 
 Honest list of what a real launch still needs.
 
-- **No email delivery.** Quotes and confirmations appear in the app only. Wire a transactional
-  provider to the status transitions.
+- **No member email.** Operators get Telegram and email alerts, but quotes and confirmations reach
+  members in the app only. Wire the same Resend integration to member-facing status changes.
 - **No refunds path.** `cancelled` after `paid` is an operator flag; moving funds back is
   manual. The refund policy is also the least settled legal page.
 - **Legal copy is a draft.** Every page is marked, and each open decision is called out inline.
-- **No rate limiting** on request creation or nonce issuance. Add it before opening signups.
+- **Rate limiting covers requests only.** Nonce issuance and sign-in are not limited per IP.
 - **Verification is pull-only.** A member who closes the tab mid-payment is picked up when they
   return, but nothing sweeps for orphaned transfers. A cron reconciling open intents against
   treasury history would close that.
