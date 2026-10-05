@@ -33,9 +33,10 @@ export const CATEGORIES: Category[] = [
     name: 'Private Aviation',
     tagline: 'Light jets to ultra long range, wheels up in hours',
     intro:
-      'Tell us the route and the window. We come back with two or three aircraft, the real all-in figure, and the crew story behind each one.',
-    leadTime: 'Quotes inside 90 minutes. Same-day departures possible with four hours notice.',
-    typical: 'Light jet from $9,000 a leg. Heavy and ultra long range from $28,000.',
+      'Tell us the route and the window. We come back with two or three aircraft, a clear all-in figure, and the crew story behind each one.',
+    leadTime:
+      'We aim to quote within 90 minutes during desk hours. Same-day departures are sometimes possible with four hours notice, subject to aircraft and crew availability.',
+    typical: 'Light jet from $9,000 a leg. Heavy and ultra long range from $28,000. Indicative, varies by date and availability.',
     fields: ['route', 'dates', 'party_size'],
     detailsPrompt:
       'Departure window, luggage and any pets, cabin preferences, whether the aircraft should wait or reposition.',
@@ -50,7 +51,7 @@ export const CATEGORIES: Category[] = [
     intro:
       'Give us the cruising ground and the dates. We shortlist boats that are genuinely available, with the crew and the running costs laid out plainly.',
     leadTime: 'Shortlists within a day. High-season Med weeks should be moved on months ahead.',
-    typical: 'From $45,000 a week for a 24m. Above 40m, from $180,000 a week plus expenses.',
+    typical: 'From $45,000 a week for a 24m. Above 40m, from $180,000 a week plus expenses. Indicative, varies by date and availability.',
     fields: ['location', 'dates', 'party_size'],
     detailsPrompt:
       'Cruising ground, cabin split, whether you need a chef, water toys, and anything the crew should know before you board.',
@@ -63,9 +64,9 @@ export const CATEGORIES: Category[] = [
     name: 'Villas & Estates',
     tagline: 'Staffed houses, private islands, ski chalets',
     intro:
-      'Houses that never reach a listing site. Send the dates and the shape of the group, and we send options with the staffing already costed.',
+      'Many of our houses are not on public listing sites. Send the dates and the shape of the group, and we send options with the staffing already costed.',
     leadTime: 'Options in a day. August in the Med and Christmas in the Alps close six months out.',
-    typical: 'From $12,000 a week. Fully staffed trophy houses, $80,000 upward.',
+    typical: 'From $12,000 a week. Fully staffed trophy houses, $80,000 upward. Indicative, varies by date and availability.',
     fields: ['location', 'dates', 'party_size'],
     detailsPrompt:
       'Bedrooms and how you want them split, must-haves like a pool or gym, staffing level, dietary requirements.',
@@ -78,9 +79,9 @@ export const CATEGORIES: Category[] = [
     name: 'Supercars & Chauffeur',
     tagline: 'Self-drive exotics, armoured saloons, full security detail',
     intro:
-      'Delivered to the hotel, the terminal, or the pit lane. We handle insurance, excess and cross-border paperwork before you touch the keys.',
+      'Delivered to the hotel, the terminal, or the pit lane. Insurance, excess and cross-border terms are set by the rental company and confirmed before you take the keys.',
     leadTime: 'Confirmed in a few hours in most cities. Event weekends need two weeks.',
-    typical: 'Self-drive from $1,400 a day. Chauffeur from $900 a day, security detail on request.',
+    typical: 'Self-drive from $1,400 a day. Chauffeur from $900 a day, security detail on request. Indicative, varies by date and availability.',
     fields: ['location', 'dates', 'party_size'],
     detailsPrompt:
       'First and second choice of car, transmission preference, delivery point and time, licence held and driver age.',
@@ -95,7 +96,7 @@ export const CATEGORIES: Category[] = [
     intro:
       'Counter seats, chef tables and rooms that do not take reservations from strangers. Or the chef comes to you.',
     leadTime: 'Most cities same day. The hardest thirty rooms in the world, two to six weeks.',
-    typical: 'Table access from $400. Private chef from $1,500 plus provisioning.',
+    typical: 'Table access from $400. Private chef from $1,500 plus provisioning. Indicative, varies by date and availability.',
     fields: ['location', 'single_date', 'party_size'],
     detailsPrompt:
       'Restaurant if you have one in mind, otherwise the mood you want. Time, allergies, and whether the occasion should be marked.',
@@ -108,9 +109,9 @@ export const CATEGORIES: Category[] = [
     name: 'Events & Access',
     tagline: 'Grand Prix, finals, fashion weeks, front row',
     intro:
-      'Sold out is a pricing problem, not a wall. Tell us the event and the seats you actually want, and we tell you what it costs today.',
+      'When an event is sold out, we look for official hospitality and authorised resale, and we tell you where every ticket comes from. Tell us the event and the seats you actually want.',
     leadTime: 'Priced within a day. Prices move daily as an event approaches, in both directions.',
-    typical: 'Hospitality from $2,500 a head. Finals and title fights, five figures a seat.',
+    typical: 'Hospitality from $2,500 a head. Finals and title fights, five figures a seat. Indicative, varies by date and availability.',
     fields: ['location', 'single_date', 'party_size'],
     detailsPrompt:
       'Event and session, where in the venue you want to be, hospitality or seats only, and your ceiling.',

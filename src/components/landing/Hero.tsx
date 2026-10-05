@@ -11,7 +11,7 @@ import { RotatingWord } from '@/components/motion/RotatingWord'
 import { Reveal } from '@/components/motion/Reveal'
 
 const STATS: [string, string][] = [
-  ['90 min', 'Median time to first quote'],
+  ['USD', 'Every quote, in dollars'],
   ['SOL / USDC', 'Settlement assets'],
   ['10 min', 'Rate lock on every quote'],
   ['On chain', 'Every payment verified'],
@@ -86,7 +86,7 @@ export function Hero() {
         className="relative mx-auto flex min-h-[86dvh] max-w-shell flex-col justify-center px-[var(--shell-x)] py-28"
       >
         <Reveal>
-          <p className="eyebrow">Members only · Solana native</p>
+          <p className="eyebrow">By request · Solana native</p>
         </Reveal>
 
         {/* Masked per-line entrance. The rotating word carries the second line. */}
@@ -106,7 +106,7 @@ export function Hero() {
         <Reveal delayIndex={5}>
           <p className="lede mt-9 max-w-xl">
             Jets, yachts, villas, cars, the table that is fully booked. Tell a concierge what
-            you want, take a firm quote in USD, and settle it in SOL or USDC. We source and
+            you want, take a clear quote in USD, and settle it in SOL or USDC. We source and
             fulfil, so there is nothing to browse and nothing to bid on.
           </p>
         </Reveal>

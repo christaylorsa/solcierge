@@ -265,6 +265,14 @@ export function RequestForm({ category }: { category: Category }) {
             required
           />
         </Field>
+        <p className="-mt-3 text-xs leading-relaxed text-faint">
+          If you include health, accessibility, allergy or dietary information, you consent to us
+          using it, and sharing it with the supplier, to arrange this booking. See our{' '}
+          <a href="/legal/privacy" className="underline decoration-line underline-offset-2 hover:text-muted">
+            privacy notice
+          </a>
+          .
+        </p>
 
         {!viewer.name || !viewer.email ? (
           <div className="grid gap-5 border-t border-line pt-6 sm:grid-cols-2">

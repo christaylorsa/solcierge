@@ -179,7 +179,7 @@ export async function POST(request: Request) {
         outcome: 'needs_review' satisfies VerifyOutcome,
         payment: recorded.data,
         message:
-          'We can see your transfer on chain, but it landed after the rate lock expired. The desk will reconcile it and confirm within the hour, nothing further is needed from you.',
+          'We can see your transfer on chain, but it landed after the rate lock expired. The desk will reconcile it and confirm with you, nothing further is needed from you.',
       })
     }
 

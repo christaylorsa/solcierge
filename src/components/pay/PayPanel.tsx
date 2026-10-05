@@ -245,8 +245,9 @@ export function PayPanel({ requestId, quote }: { requestId: string; quote: Quote
         <p className="mt-4 text-sm leading-relaxed text-muted">{settled.message}</p>
         <Receipt signature={settled.signature} />
         <p className="mt-6 text-xs leading-relaxed text-faint">
-          A concierge is locking in the booking now. You will hear from us within the hour, and
-          the confirmation will carry the supplier's own terms.
+          A concierge will now confirm with the supplier. During desk hours we aim to update you
+          within the hour. Your booking is confirmed when the supplier confirms, and the
+          confirmation will carry the supplier's own terms.
         </p>
       </Shell>
     )

@@ -15,7 +15,7 @@ const STEPS = [
   {
     n: '02',
     title: 'We source, then quote',
-    body: 'A concierge works the request against operators we already hold accounts with. You get one figure in USD with what it includes and what it does not, plus the reasoning behind it.',
+    body: 'A concierge works the request against vetted operators and suppliers. You get one figure in USD with what it includes and what it does not, plus the reasoning behind it.',
   },
   {
     n: '03',

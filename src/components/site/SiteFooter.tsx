@@ -19,7 +19,7 @@ export function SiteFooter() {
             <p className="display text-2xl text-ink">Solcierge</p>
             <p className="mt-4 max-w-sm text-sm leading-relaxed text-muted">
               A request-and-fulfil concierge. You brief us, we source and quote, you settle in
-              SOL or USDC. No inventory, no listings, no middlemen you did not ask for.
+              SOL or USDC. No inventory, no listings, no middlemen you don't know about. We name the supplier in every quote.
             </p>
 
             <dl className="mt-8 space-y-2 text-xs">

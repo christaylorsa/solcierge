@@ -193,7 +193,7 @@ function waitingCopy(status: string): string {
     case 'paid':
       return 'Funds received and verified on chain. We are confirming with the supplier now and will send the paperwork as soon as it is signed.'
     case 'fulfilled':
-      return 'Delivered. Everything for this booking is in your confirmation email. If anything needs changing, reply to that thread and it reaches the same concierge.'
+      return 'Delivered. Your confirmation and the supplier details are on this page. If anything needs changing, contact the desk and it reaches the same concierge.'
     case 'cancelled':
       return 'This request is closed and nothing was charged. If circumstances changed, send a fresh request and we will re-source it.'
     default:

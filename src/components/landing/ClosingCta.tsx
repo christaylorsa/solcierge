@@ -18,7 +18,7 @@ export function ClosingCta() {
         />
         <p className="lede mt-6">
           Connect a wallet and brief the desk in about two minutes. No fee to ask, no
-          obligation to accept the quote, and no supplier contacts you directly.
+          obligation to accept the quote, and no supplier contacts you before you book.
         </p>
         <div className="mt-10 flex flex-wrap justify-center gap-4">
           <Magnetic>
