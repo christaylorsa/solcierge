@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { fail, handleError, ok, readJson } from '@/lib/api'
 import { requireViewer } from '@/lib/auth'
 import { getRequest } from '@/lib/data'
-import { decideSettlement } from '@/lib/payments/settlement'
+import { decideSettlement, duplicateOutcome } from '@/lib/payments/settlement'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { verifyTransfer } from '@/lib/solana/verify'
 import { fetchTransaction } from '@/lib/solana/connection'
@@ -80,7 +80,7 @@ export async function POST(request: Request) {
 
     if (existing.error) throw new Error(existing.error.message)
     if (existing.data) {
-      if (existing.data.request_id !== intent.request_id) {
+      if (duplicateOutcome(existing.data.request_id, intent.request_id) === 'mismatch') {
         // The same transfer cannot settle two bookings.
         return fail('That transaction has already been used to settle a different booking.', 409, {
           outcome: 'mismatch' satisfies VerifyOutcome,
@@ -142,7 +142,7 @@ export async function POST(request: Request) {
       lockExpiresAt: Date.parse(intent.expires_at) / 1000,
       graceSeconds: LATE_GRACE_SECONDS,
     })
-    const review = settlement.kind === 'review' ? settlement.reason : null
+    let review = settlement.kind === 'review' ? settlement.reason : null
 
     const recorded = await db
       .from('payments')
@@ -160,8 +160,16 @@ export async function POST(request: Request) {
       .single()
 
     if (recorded.error) {
-      // Two tabs verifying the same signature: the unique index is the arbiter.
+      // A concurrent verify of the same signature won the unique index. Answer from
+      // the row it wrote, which may belong to a different booking (SA-12).
       if (recorded.error.code === '23505') {
+        const winner = await db.from('payments').select('request_id').eq('tx_signature', signature).maybeSingle()
+        if (winner.error) throw new Error(winner.error.message)
+        if (winner.data && duplicateOutcome(winner.data.request_id, intent.request_id) === 'mismatch') {
+          return fail('That transaction has already been used to settle a different booking.', 409, {
+            outcome: 'mismatch' satisfies VerifyOutcome,
+          })
+        }
         return ok({
           outcome: 'already_paid' satisfies VerifyOutcome,
           message: 'This payment was already confirmed.',
@@ -170,7 +178,31 @@ export async function POST(request: Request) {
       throw new Error(recorded.error.message)
     }
 
-    await db.from('payment_intents').update({ status: 'consumed' }).eq('id', intent.id)
+    // Each step below is conditional on the state it was decided against, so a
+    // concurrent transfer or operator action turns into a review, never a silent
+    // overwrite (SA-12).
+    const consumed = await db
+      .from('payment_intents')
+      .update({ status: 'consumed' })
+      .eq('id', intent.id)
+      .eq('status', 'open')
+      .select('id')
+    if (consumed.error) throw new Error(consumed.error.message)
+    if (!review && consumed.data.length === 0) {
+      review = 'Its rate lock had already been settled by another transfer.'
+    }
+
+    if (!review) {
+      const moved = await db
+        .from('booking_requests')
+        .update({ status: 'paid' })
+        .eq('id', intent.request_id)
+        .eq('user_id', viewer.id)
+        .eq('status', 'quoted')
+        .select('id')
+      if (moved.error) throw new Error(moved.error.message)
+      if (moved.data.length === 0) review = 'The booking changed state while the transfer was being verified.'
+    }
 
     after(() =>
       notifyPayment({
@@ -192,14 +224,6 @@ export async function POST(request: Request) {
           'We can see your transfer on chain, but it does not match the live quote and rate lock, so the desk will reconcile it and confirm with you. Nothing further is needed from you.',
       })
     }
-
-    const moved = await db
-      .from('booking_requests')
-      .update({ status: 'paid' })
-      .eq('id', intent.request_id)
-      .eq('user_id', viewer.id)
-
-    if (moved.error) throw new Error(moved.error.message)
 
     return ok({
       outcome: 'paid' satisfies VerifyOutcome,

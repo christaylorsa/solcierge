@@ -118,7 +118,13 @@ export async function POST(request: Request) {
       .select('id, token, amount, amount_usd, sol_price_usd, recipient, mint, status, expires_at, created_at')
       .single()
 
-    if (inserted.error) throw new Error(inserted.error.message)
+    if (inserted.error) {
+      // A concurrent lock on the same request won the one-open-intent index (SA-12).
+      if (inserted.error.code === '23505') {
+        return fail('Another rate lock is being taken for this booking. Try again in a moment.', 409)
+      }
+      throw new Error(inserted.error.message)
+    }
 
     return ok({ intent: inserted.data, lockSeconds: env.rateLockSeconds }, { status: 201 })
   } catch (error) {

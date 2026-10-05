@@ -51,3 +51,12 @@ export function decideSettlement(input: SettlementInput): Settlement {
   }
   return { kind: 'paid' }
 }
+
+/**
+ * A signature that is already recorded: harmless on its own booking, a replay on
+ * any other. The unique index on payments.tx_signature makes this the arbiter for
+ * concurrent verifies too.
+ */
+export function duplicateOutcome(recordedRequestId: string, requestId: string): 'already_paid' | 'mismatch' {
+  return recordedRequestId === requestId ? 'already_paid' : 'mismatch'
+}

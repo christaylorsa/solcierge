@@ -111,6 +111,20 @@ alter table public.payment_intents add column if not exists terms_accepted_at ti
 
 create index if not exists payment_intents_request_idx on public.payment_intents (request_id, created_at desc);
 
+-- One live rate lock per request, so two concurrent locks cannot both stay open.
+-- Older duplicates are expired first so the index can be built on existing data.
+update public.payment_intents p
+   set status = 'expired'
+ where p.status = 'open'
+   and exists (
+     select 1 from public.payment_intents q
+      where q.request_id = p.request_id
+        and q.status = 'open'
+        and (q.created_at, q.id) > (p.created_at, p.id)
+   );
+create unique index if not exists payment_intents_one_open_per_request
+  on public.payment_intents (request_id) where status = 'open';
+
 -- --- payments --------------------------------------------------------------
 -- One confirmed on-chain transfer. tx_signature is unique: that constraint is
 -- what makes replaying a signature against a second request impossible.

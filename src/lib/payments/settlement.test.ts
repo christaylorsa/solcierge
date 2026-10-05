@@ -7,7 +7,7 @@
 
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { decideSettlement, type SettlementInput } from './settlement.ts'
+import { decideSettlement, duplicateOutcome, type SettlementInput } from './settlement.ts'
 
 const LIVE: SettlementInput = {
   bookingStatus: 'quoted',
@@ -47,4 +47,9 @@ test('a transfer landing after the lock and its grace goes to review', () => {
 
 test('SA-11: a transfer with no reported block time goes to review', () => {
   assert.equal(decideSettlement({ ...LIVE, blockTime: null }).kind, 'review')
+})
+
+test('SA-12: a signature recorded on another booking is a replay, even when found after a lost race', () => {
+  assert.equal(duplicateOutcome('booking-a', 'booking-a'), 'already_paid')
+  assert.equal(duplicateOutcome('booking-a', 'booking-b'), 'mismatch')
 })
