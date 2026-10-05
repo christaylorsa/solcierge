@@ -1,10 +1,12 @@
 import { cookies } from 'next/headers'
 import { SignJWT, jwtVerify } from 'jose'
 import { serverEnv } from '@/lib/env'
+import type { SignInFields } from '@/lib/siws'
 
 export const SESSION_COOKIE = 'solcierge_session'
 export const NONCE_COOKIE = 'solcierge_nonce'
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 30
+const NONCE_TTL_SECONDS = 300
 
 export type WalletSession = {
   wallet: string
@@ -59,6 +61,9 @@ export async function clearWalletSession(): Promise<void> {
 //   - it proves the challenge came from us and has not expired
 //   - it is bound to one wallet, so a captured challenge cannot be used to
 //     authenticate a different address
+//   - it carries the domain it was issued on, and the signed text (SIWS format,
+//     see lib/siws.ts) is rebuilt from it, so wallets can warn when a different
+//     site presents our challenge
 //   - the cookie is deleted on use, but deletion happens in the client. A caller
 //     that keeps presenting the same cookie can retry inside the five-minute
 //     window, which requires already holding a valid signature for that wallet.
@@ -67,12 +72,23 @@ export async function clearWalletSession(): Promise<void> {
 // If truly server-tracked single use is ever needed, add a used_nonces table with
 // a TTL and check it here.
 
-export async function issueNonce(wallet: string): Promise<string> {
-  const nonce = crypto.randomUUID().replace(/-/g, '')
-  const token = await new SignJWT({ nonce, wallet })
+export async function issueNonce(
+  wallet: string,
+  site: { domain: string; uri: string; chainId: string },
+): Promise<SignInFields> {
+  const issued = new Date()
+  const fields: SignInFields = {
+    ...site,
+    address: wallet,
+    nonce: crypto.randomUUID().replace(/-/g, ''),
+    issuedAt: issued.toISOString(),
+    expirationTime: new Date(issued.getTime() + NONCE_TTL_SECONDS * 1000).toISOString(),
+  }
+
+  const token = await new SignJWT({ ...fields })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
-    .setExpirationTime('5m')
+    .setExpirationTime(`${NONCE_TTL_SECONDS}s`)
     .sign(key())
 
   const store = await cookies()
@@ -81,38 +97,29 @@ export async function issueNonce(wallet: string): Promise<string> {
     sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production',
     path: '/',
-    maxAge: 300,
+    maxAge: NONCE_TTL_SECONDS,
   })
-  return nonce
+  return fields
 }
 
 /**
  * Verifies the challenge came from us, has not expired, and was issued for this
- * exact wallet. Clears the cookie either way, so a failure does not leave a live
- * challenge behind.
+ * exact wallet, and returns the fields it was issued with so the caller rebuilds
+ * the signed text from server-held values. Clears the cookie either way, so a
+ * failure does not leave a live challenge behind.
  */
-export async function consumeNonce(candidate: string, wallet: string): Promise<boolean> {
+export async function consumeNonce(candidate: string, wallet: string): Promise<SignInFields | null> {
   const store = await cookies()
   const token = store.get(NONCE_COOKIE)?.value
-  if (!token) return false
+  if (!token) return null
   store.delete(NONCE_COOKIE)
   try {
     const { payload } = await jwtVerify(token, key())
-    return payload.nonce === candidate && payload.wallet === wallet
+    if (payload.nonce !== candidate || payload.address !== wallet) return null
+    const fields = ['domain', 'address', 'uri', 'chainId', 'nonce', 'issuedAt', 'expirationTime'] as const
+    if (!fields.every((name) => typeof payload[name] === 'string')) return null
+    return Object.fromEntries(fields.map((name) => [name, payload[name]])) as SignInFields
   } catch {
-    return false
+    return null
   }
-}
-
-/** The exact bytes the wallet is asked to sign. Kept in one place so the client and server never drift. */
-export function signInMessage(wallet: string, nonce: string): string {
-  return [
-    'Solcierge',
-    '',
-    'Sign in to your concierge account. This signature proves you control the wallet.',
-    'It authorises no transaction and moves no funds.',
-    '',
-    `Wallet: ${wallet}`,
-    `Nonce: ${nonce}`,
-  ].join('\n')
 }

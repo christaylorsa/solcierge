@@ -3,7 +3,8 @@ import bs58 from 'bs58'
 import nacl from 'tweetnacl'
 import { fail, handleError, ok, readJson } from '@/lib/api'
 import { upsertUserByWallet } from '@/lib/auth'
-import { consumeNonce, issueWalletSession, signInMessage } from '@/lib/session'
+import { consumeNonce, issueWalletSession } from '@/lib/session'
+import { signInMessage } from '@/lib/siws'
 
 export const dynamic = 'force-dynamic'
 
@@ -21,7 +22,8 @@ export async function POST(request: Request) {
       return fail('Wallet, signature and nonce are all required.')
     }
 
-    if (!(await consumeNonce(body.nonce, body.wallet))) {
+    const challenge = await consumeNonce(body.nonce, body.wallet)
+    if (!challenge) {
       return fail('That sign-in request expired. Try connecting again.', 400)
     }
 
@@ -40,7 +42,8 @@ export async function POST(request: Request) {
     }
     if (signature.length !== 64) return fail('The signature is the wrong length.')
 
-    const message = new TextEncoder().encode(signInMessage(body.wallet, body.nonce))
+    // Rebuilt from the fields we signed into the nonce cookie, never from the client.
+    const message = new TextEncoder().encode(signInMessage(challenge))
     const valid = nacl.sign.detached.verify(message, signature, publicKey.toBytes())
     if (!valid) return fail('That signature does not match the wallet.', 401)
 
