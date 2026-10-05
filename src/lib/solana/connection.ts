@@ -1,5 +1,6 @@
 import { Connection, type VersionedTransactionResponse } from '@solana/web3.js'
-import { serverEnv } from '@/lib/env'
+import { publicEnv, serverEnv } from '@/lib/env'
+import { clusterMismatch } from './cluster'
 
 let cached: Connection | null = null
 
@@ -10,6 +11,27 @@ export function rpc(): Connection {
   return cached
 }
 
+let clusterChecked: Promise<void> | null = null
+
+/**
+ * Proves the RPC endpoint is on the cluster this deployment settles on, once per
+ * instance. A failed or mismatched check is not cached, so a fixed config or a
+ * recovered endpoint is picked up on the next payment.
+ */
+function assertCluster(): Promise<void> {
+  clusterChecked ??= rpc()
+    .getGenesisHash()
+    .then((hash) => {
+      const problem = clusterMismatch(publicEnv.cluster, hash)
+      if (problem) throw new Error(`Misconfigured: ${problem}`)
+    })
+    .catch((error: unknown) => {
+      clusterChecked = null
+      throw error
+    })
+  return clusterChecked
+}
+
 /**
  * The transaction fetcher handed to verifyTransfer in production.
  *
@@ -17,7 +39,8 @@ export function rpc(): Connection {
  * infrastructure: the verifier is pure decision logic over a transaction, which is
  * what makes it testable against transactions no cluster would give us on demand.
  */
-export function fetchTransaction(signature: string): Promise<VersionedTransactionResponse | null> {
+export async function fetchTransaction(signature: string): Promise<VersionedTransactionResponse | null> {
+  await assertCluster()
   return rpc().getTransaction(signature, {
     commitment: 'confirmed',
     maxSupportedTransactionVersion: 0,

@@ -18,7 +18,10 @@ export function handleError(error: unknown) {
   if (error instanceof UnauthorizedError) return fail(error.message, 401)
   if (error instanceof ForbiddenError) return fail(error.message, 403)
 
-  if (error instanceof Error && error.message.startsWith('Missing environment variable')) {
+  if (
+    error instanceof Error &&
+    (error.message.startsWith('Missing environment variable') || error.message.startsWith('Misconfigured:'))
+  ) {
     console.error('[solcierge] configuration error:', error.message)
     return fail('This deployment is not fully configured. See README.md.', 503)
   }
