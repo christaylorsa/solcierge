@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers'
-import { SignJWT, jwtVerify } from 'jose'
 import { serverEnv } from '@/lib/env'
 import type { SignInFields } from '@/lib/siws'
+import { signToken, verifyToken } from '@/lib/tokens'
 
 export const SESSION_COOKIE = 'solcierge_session'
 export const NONCE_COOKIE = 'solcierge_nonce'
@@ -13,16 +13,17 @@ export type WalletSession = {
   userId: string
 }
 
-function key(): Uint8Array {
-  return new TextEncoder().encode(serverEnv().sessionSecret)
+function secret(): string {
+  return serverEnv().sessionSecret
 }
 
 export async function issueWalletSession(session: WalletSession): Promise<void> {
-  const token = await new SignJWT({ wallet: session.wallet, userId: session.userId })
-    .setProtectedHeader({ alg: 'HS256' })
-    .setIssuedAt()
-    .setExpirationTime(`${SESSION_TTL_SECONDS}s`)
-    .sign(key())
+  const token = await signToken(
+    'session',
+    { wallet: session.wallet, userId: session.userId },
+    SESSION_TTL_SECONDS,
+    secret(),
+  )
 
   const store = await cookies()
   store.set(SESSION_COOKIE, token, {
@@ -38,14 +39,11 @@ export async function readWalletSession(): Promise<WalletSession | null> {
   const store = await cookies()
   const token = store.get(SESSION_COOKIE)?.value
   if (!token) return null
-  try {
-    const { payload } = await jwtVerify(token, key())
-    if (typeof payload.wallet !== 'string' || typeof payload.userId !== 'string') return null
-    return { wallet: payload.wallet, userId: payload.userId }
-  } catch {
-    // Expired or tampered. Treat as signed out rather than erroring the page.
-    return null
-  }
+  // Expired, tampered or the wrong kind of token: treat as signed out rather than
+  // erroring the page.
+  const payload = await verifyToken('session', token, secret())
+  if (typeof payload?.wallet !== 'string' || typeof payload.userId !== 'string') return null
+  return { wallet: payload.wallet, userId: payload.userId }
 }
 
 export async function clearWalletSession(): Promise<void> {
@@ -85,11 +83,7 @@ export async function issueNonce(
     expirationTime: new Date(issued.getTime() + NONCE_TTL_SECONDS * 1000).toISOString(),
   }
 
-  const token = await new SignJWT({ ...fields })
-    .setProtectedHeader({ alg: 'HS256' })
-    .setIssuedAt()
-    .setExpirationTime(`${NONCE_TTL_SECONDS}s`)
-    .sign(key())
+  const token = await signToken('siws-nonce', { ...fields }, NONCE_TTL_SECONDS, secret())
 
   const store = await cookies()
   store.set(NONCE_COOKIE, token, {
@@ -113,13 +107,9 @@ export async function consumeNonce(candidate: string, wallet: string): Promise<S
   const token = store.get(NONCE_COOKIE)?.value
   if (!token) return null
   store.delete(NONCE_COOKIE)
-  try {
-    const { payload } = await jwtVerify(token, key())
-    if (payload.nonce !== candidate || payload.address !== wallet) return null
-    const fields = ['domain', 'address', 'uri', 'chainId', 'nonce', 'issuedAt', 'expirationTime'] as const
-    if (!fields.every((name) => typeof payload[name] === 'string')) return null
-    return Object.fromEntries(fields.map((name) => [name, payload[name]])) as SignInFields
-  } catch {
-    return null
-  }
+  const payload = await verifyToken('siws-nonce', token, secret())
+  if (!payload || payload.nonce !== candidate || payload.address !== wallet) return null
+  const fields = ['domain', 'address', 'uri', 'chainId', 'nonce', 'issuedAt', 'expirationTime'] as const
+  if (!fields.every((name) => typeof payload[name] === 'string')) return null
+  return Object.fromEntries(fields.map((name) => [name, payload[name]])) as SignInFields
 }

@@ -32,7 +32,9 @@ export async function getViewer(): Promise<Viewer | null> {
       .eq('id', walletSession.userId)
       .maybeSingle()
 
-    if (data) {
+    // The row must still hold the wallet the session was issued for. After
+    // anonymize_user() (or any wallet change) an old cookie stops resolving (SA-13).
+    if (data && data.wallet_address === walletSession.wallet) {
       return {
         id: data.id,
         wallet_address: data.wallet_address,

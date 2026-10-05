@@ -49,6 +49,13 @@ function required(name: string): string {
   return value
 }
 
+/** The session signing secret. Too short to resist brute force counts as missing (SA-13). */
+function sessionSecret(): string {
+  const value = required('SESSION_SECRET')
+  if (value.length < 32) throw new Error('Missing environment variable: SESSION_SECRET (needs at least 32 characters)')
+  return value
+}
+
 function list(name: string): string[] {
   return (process.env[name] ?? '')
     .split(',')
@@ -60,7 +67,7 @@ export function serverEnv() {
   return {
     supabaseUrl: required('NEXT_PUBLIC_SUPABASE_URL'),
     serviceRoleKey: required('SUPABASE_SERVICE_ROLE_KEY'),
-    sessionSecret: required('SESSION_SECRET'),
+    sessionSecret: sessionSecret(),
     rpcUrl: process.env.SOLANA_RPC_URL || publicEnv.rpcUrl || PUBLIC_RPC[cluster()],
     treasuryWallet: required('NEXT_PUBLIC_TREASURY_WALLET'),
     usdcMint: publicEnv.usdcMint,
