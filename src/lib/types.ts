@@ -24,6 +24,9 @@ export type RequestDetails = {
   trip?: 'one_way' | 'return'
   party_size?: number
   details?: string
+  /** Typed by the member and unverified. Never copied to users.email (SA-02). */
+  contact_name?: string
+  contact_email?: string
 }
 
 export type User = {

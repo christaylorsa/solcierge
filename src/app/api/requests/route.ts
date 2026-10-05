@@ -2,6 +2,7 @@ import { after } from 'next/server'
 import { z } from 'zod'
 import { fail, handleError, ok, readJson } from '@/lib/api'
 import { requireViewer } from '@/lib/auth'
+import { contactRecord } from '@/lib/contact'
 import { listRequestsForUser } from '@/lib/data'
 import { notifyNewRequest } from '@/lib/notify'
 import { supabaseAdmin } from '@/lib/supabase/admin'
@@ -71,6 +72,8 @@ export async function POST(request: Request) {
       ...details
     } = parsed.data
     if (details.trip === 'one_way') details.end_date = undefined
+    const contact = contactRecord({ contact_name, contact_email }, viewer)
+    const record = { ...stripUndefined(details), ...contact.details }
 
     const db = supabaseAdmin()
 
@@ -82,7 +85,7 @@ export async function POST(request: Request) {
       .insert({
         user_id: viewer.id,
         category,
-        details: stripUndefined(details),
+        details: record,
         budget_min: budget_min ?? null,
         budget_max: budget_max ?? null,
         status: 'pending',
@@ -92,20 +95,16 @@ export async function POST(request: Request) {
 
     if (error) throw new Error(error.message)
 
-    // Backfill the member's contact details from the first request that carries them.
-    const patch: Record<string, string> = {}
-    if (contact_name && !viewer.name) patch.name = contact_name
-    if (contact_email && !viewer.email) patch.email = contact_email.toLowerCase()
-    if (Object.keys(patch).length > 0) {
-      // A duplicate email belongs to another member: keep the request, skip the patch.
-      const { error: patchError } = await db.from('users').update(patch).eq('id', viewer.id)
-      if (patchError) console.warn('[solcierge] could not backfill contact details:', patchError.message)
+    // Backfill an empty profile name. The email stays on the request: see contactRecord().
+    if (contact.userPatch.name) {
+      const { error: patchError } = await db.from('users').update(contact.userPatch).eq('id', viewer.id)
+      if (patchError) console.warn('[solcierge] could not backfill contact name:', patchError.message)
     }
 
     after(() =>
       notifyNewRequest({
         category,
-        details: stripUndefined(details),
+        details: record,
         budgetMin: budget_min ?? null,
         budgetMax: budget_max ?? null,
         member: {

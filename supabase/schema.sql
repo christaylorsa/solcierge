@@ -175,7 +175,8 @@ grant all on public.users, public.booking_requests, public.quotes,
 --   select public.anonymize_user('<user id>');
 --
 -- That clears the member's name, email and wallet and strips the free-text
--- brief from their requests, while bookings, quotes and payments remain.
+-- brief and typed contact details from their requests, while bookings, quotes
+-- and payments remain.
 
 alter table public.users add column if not exists anonymized_at timestamptz;
 alter table public.users drop constraint if exists users_identity_present;
@@ -198,8 +199,10 @@ begin
      set name = null, email = null, wallet_address = null, anonymized_at = now()
    where id = target;
 
+  -- The free-text brief, plus the contact name and email a member typed into it
+  -- (kept on the request rather than the users row, see SA-02 in SECURITY-AUDIT.md).
   update public.booking_requests
-     set details = details - 'details'
+     set details = details - 'details' - 'contact_name' - 'contact_email'
    where user_id = target;
 end $$;
 
