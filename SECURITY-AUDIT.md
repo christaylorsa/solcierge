@@ -9,6 +9,12 @@ auth and session code, the schema, and the client components that call the API. 
 was checked against the code. Where exploitability depends on something that can't be seen from the
 repo (production env vars, Supabase dashboard settings), the finding says so.
 
+**Status (Phase 2, same day):** every Critical, High, Medium and Low finding is fixed on the
+`security-audit` branch, one commit per finding, each with a regression test where the logic is
+testable. After every commit, `npm run typecheck`, `npm run lint`, `npm test` (26 tests before,
+76 after) and `npm run build:check` all passed. Nothing has been pushed or deployed, and nothing
+was changed in Supabase or Vercel. See **Deploying these fixes** at the end before you ship.
+
 Severity scale: **Critical** = a remote attacker can take money, bookings or operator rights with
 no special access. **High** = the same, but with a realistic precondition, or a known critical
 dependency advisory. **Medium** = a real weakness that needs a misconfiguration, a victim's help,
@@ -21,30 +27,30 @@ or only costs money or integrity in edge cases. **Low** = defence in depth, or m
 
 | ID | Severity | Title | Status |
 | --- | --- | --- | --- |
-| SA-01 | Critical* | Any wallet member can become an operator by claiming an admin email | Open |
-| SA-02 | High | Unverified contact email becomes a login identity (account pre-hijack) | Open |
-| SA-03 | High | Members without a wallet can claim someone else's on-chain payment | Open |
-| SA-04 | High | Next.js 15.5.22 has critical advisories (fixed in 15.5.24) | Open |
-| SA-05 | Medium | Verify settles superseded intents and bookings in any state | Open |
-| SA-06 | Medium | No cluster check: test-network funds can settle mainnet bookings | Open |
-| SA-07 | Medium | Sign-in message is not domain-bound (cross-site signature phishing) | Open |
-| SA-08 | Medium | `/api/rpc` is an unauthenticated, unthrottled relay onto the RPC quota | Open |
-| SA-09 | Medium | One spot price with no cross-check sets the SOL amount owed | Open |
-| SA-10 | Low | Open redirect in `/auth/callback` (`next` parameter) | Open |
-| SA-11 | Low | Payments verified at `confirmed`; missing block time skips time checks | Open |
-| SA-12 | Low | Race conditions in rate locks and verification | Open |
-| SA-13 | Low | Session JWT hardening (algorithm, audience, secret length, wallet binding) | Open |
-| SA-14 | Low | No Origin check on state-changing API routes | Open |
-| SA-15 | Low | No security headers | Open |
-| SA-16 | Low | Input validation gaps on auth and id parameters | Open |
-| SA-17 | Low | No rate limiting on sign-in, rate locks or verification | Open |
-| SA-18 | Low | Pay panel allows paying from a wallet other than the signed-in one | Open |
-| SA-19 | Info | Sessions are 30-day bearer tokens with no server-side revocation | Open |
-| SA-20 | Info | Sign-in nonce is not server-tracked single use | Open |
-| SA-21 | Info | Remaining `npm audit` findings are build-time or unreachable | Open |
-| SA-22 | Info | No Content-Security-Policy `script-src` | Open |
-| SA-23 | Info | Supabase settings that can't be checked from the repo | Open |
-| SA-24 | Info | `npm run lint` can't run (no ESLint config) | Open |
+| SA-01 | Critical* | Any wallet member can become an operator by claiming an admin email | Fixed (7485770) |
+| SA-02 | High | Unverified contact email becomes a login identity (account pre-hijack) | Fixed (59436aa), schema re-run needed |
+| SA-03 | High | Members without a wallet can claim someone else's on-chain payment | Fixed (045b433) |
+| SA-04 | High | Next.js 15.5.22 has critical advisories (fixed in 15.5.24) | Fixed (e6f1a56) |
+| SA-05 | Medium | Verify settles superseded intents and bookings in any state | Fixed (ec756d5, 6d7d843) |
+| SA-06 | Medium | No cluster check: test-network funds can settle mainnet bookings | Fixed (91bb1e4) |
+| SA-07 | Medium | Sign-in message is not domain-bound (cross-site signature phishing) | Fixed (3f90fce) |
+| SA-08 | Medium | `/api/rpc` is an unauthenticated, unthrottled relay onto the RPC quota | Fixed (b6255d6) |
+| SA-09 | Medium | One spot price with no cross-check sets the SOL amount owed | Fixed (c39116a); policy needs decision |
+| SA-10 | Low | Open redirect in `/auth/callback` (`next` parameter) | Fixed (c3ef325) |
+| SA-11 | Low | Payments verified at `confirmed`; missing block time skips time checks | Fixed (75eee01) |
+| SA-12 | Low | Race conditions in rate locks and verification | Fixed (a6e7994), schema re-run needed |
+| SA-13 | Low | Session JWT hardening (algorithm, audience, secret length, wallet binding) | Fixed (a39295a) |
+| SA-14 | Low | No Origin check on state-changing API routes | Fixed (8ccdca3) |
+| SA-15 | Low | No security headers | Fixed (240217e) |
+| SA-16 | Low | Input validation gaps on auth and id parameters | Fixed (94504e2) |
+| SA-17 | Low | No rate limiting on sign-in, rate locks or verification | Fixed per instance (924ab27); shared store needs decision |
+| SA-18 | Low | Pay panel allows paying from a wallet other than the signed-in one | Fixed (65265c4) |
+| SA-19 | Info | Sessions are 30-day bearer tokens with no server-side revocation | Deferred |
+| SA-20 | Info | Sign-in nonce is not server-tracked single use | Deferred |
+| SA-21 | Info | Remaining `npm audit` findings are build-time or unreachable | Deferred (no non-breaking fix) |
+| SA-22 | Info | No Content-Security-Policy `script-src` | Deferred |
+| SA-23 | Info | Supabase settings that can't be checked from the repo | Needs your action (dashboard) |
+| SA-24 | Info | `npm run lint` can't run (no ESLint config) | Fixed (ea3b77e) |
 
 \* Critical when `ADMIN_EMAILS` is set in production. The local `.env.local` has it empty. I
 couldn't see the Vercel value.
@@ -429,3 +435,127 @@ There is no ESLint config, so `next lint` stops at an interactive setup prompt.
 - **Cookies.** `httpOnly`, `SameSite=Lax`, and `Secure` in production.
 - **Database.** RLS is on with zero policies, privileges are revoked from `anon` and `authenticated`,
   and `anonymize_user()` is not executable by them.
+
+---
+
+## Phase 2 status
+
+Commits are on the `security-audit` branch, oldest first. Regression tests are listed with each
+fix.
+
+| ID | Status | Regression test |
+| --- | --- | --- |
+| SA-01 | Fixed. Admin rights come from the session wallet or the Supabase-verified email only (`src/lib/admin.ts`). | `src/lib/admin.test.ts` |
+| SA-02 | Fixed. Typed contact details are stored on the request, never in `users.email`, and `anonymize_user()` strips them. **Re-run `supabase/schema.sql`.** | `src/lib/contact.test.ts` |
+| SA-03 | Fixed. Intent and verify require a wallet session, and `verifyTransfer` takes `expectedPayer` as a required argument. | `verify.test.ts` ("no signed-in wallet") |
+| SA-04 | Fixed. Next 15.5.27, plus the non-breaking `npm audit fix` patches. No critical advisories remain. | n/a (`npm audit`) |
+| SA-05 | Fixed. `decideSettlement()` auto-settles only the live lock on the live quote of a `quoted` booking. Everything else is recorded as `needs_review` with the reason in the alert. | `src/lib/payments/settlement.test.ts` |
+| SA-06 | Fixed. The genesis hash is checked against `NEXT_PUBLIC_SOLANA_CLUSTER` before any transaction is trusted. Hashes confirmed against the public RPCs. | `src/lib/solana/cluster.test.ts` |
+| SA-07 | Fixed. SIWS-format message (domain, URI, chain id, issued-at, expiry), rebuilt server-side from the signed nonce. | `src/lib/siws.test.ts` |
+| SA-08 | Fixed. `/api/rpc` needs a wallet session and is rate limited per wallet and per IP. Allowlist moved to `src/lib/rpc-policy.ts`. | `rpc-policy.test.ts`, `ratelimit.test.ts` |
+| SA-09 | Fixed. Both feeds are queried in parallel and must agree within 2%. One feed is still used alone if the other is down (see Needs decision). | `src/lib/price-check.test.ts` |
+| SA-10 | Fixed. `safeNextPath()` allows single-slash relative paths only. | `src/lib/redirect.test.ts` |
+| SA-11 | Fixed. Transactions are read at `finalized`, a null block time goes to review, and the pay panel polls about 50 s. | `settlement.test.ts` (SA-11 case) |
+| SA-12 | Fixed. One-open-intent index, conditional consume and promote, and the unique-violation path re-reads the winning row. **Re-run `supabase/schema.sql`.** | `settlement.test.ts` (`duplicateOutcome`) |
+| SA-13 | Fixed. HS256 pinned, separate audiences, 32-character secret floor, session re-bound to the row's wallet. Existing sessions are signed out once. | `src/lib/tokens.test.ts` |
+| SA-14 | Fixed. Middleware returns 403 for cross-origin non-GET `/api/*` requests. Checked against the built server with curl. | `src/lib/origin.test.ts` |
+| SA-15 | Fixed. Headers on every path, and `X-Powered-By` removed. Checked on the built server. | `src/lib/security-headers.test.ts` |
+| SA-16 | Fixed. Wallet address, sign-in body and UUID validation. | `src/lib/validate.test.ts` |
+| SA-17 | Fixed per serverless instance (nonce, sign-in, intent, verify). A shared store needs a decision. | `ratelimit.test.ts` |
+| SA-18 | Fixed. The pay panel refuses to build a transfer from a wallet other than the session's. | `src/lib/pay-guard.test.ts` |
+| SA-19 | Deferred. Needs a sessions table or a per-user token version. | — |
+| SA-20 | Deferred. SA-07 removes the cross-site use. A `used_nonces` table would close the rest. | — |
+| SA-21 | Deferred. The remaining advisories need breaking major upgrades (Tailwind 4, spl-token) and aren't reachable at runtime. | — |
+| SA-22 | Deferred. Needs nonce-based CSP and testing with the wallets. | — |
+| SA-23 | Your action in the Supabase dashboard (see below). | — |
+| SA-24 | Fixed. ESLint flat config. The two purely stylistic rules that flagged existing copy are off. | n/a |
+
+Not unit-testable, so covered by the manual checks below: the Supabase calls themselves
+(conditional updates, the unique index), the route wiring of the rate limiters, and the pay
+panel's behaviour in a real wallet.
+
+## Needs decision
+
+1. **Single price feed (SA-09).** When one of Jupiter or CoinGecko is down, SOL locks still go
+   ahead on the other alone. That keeps SOL payable during an outage, at the cost of no
+   cross-check. The alternative is to refuse SOL locks (USDC only) until both answer. Your call
+   on availability versus safety.
+2. **Shared rate-limit store (SA-17, SA-08).** The limits hold per serverless instance. Limits
+   that hold globally need Upstash Redis or Vercel KV, which means a new account or integration
+   and possibly cost.
+3. **Existing unverified emails in `users` (SA-02).** Rows created before this fix may hold an
+   email a wallet member typed but never verified. Whoever owns that address would land in that
+   member's account on a magic-link sign-in. Decide whether to keep those emails (you know your
+   few members) or clear them. To see them (read-only):
+   `select id, wallet_address, email, created_at from public.users where wallet_address is not null and email is not null;`
+4. **Email linking (SA-02 follow-on).** Wallet members can no longer reach their account by
+   magic link through a typed contact email. If you want wallet and email linked, it needs a
+   verified flow: send a link to the address and link it on click.
+
+## Secrets
+
+No secret values were found in the working tree, the git history (the repo is public), the build
+output or `solcierge-export.zip`. **Nothing needs rotating** on the evidence available. I didn't
+read or print any secret value; the scan matched files against the local values and key-shaped
+patterns and printed only file names and counts.
+
+The Vercel values are the ones I couldn't see. That includes whether production `ADMIN_EMAILS`
+is set, which decides whether SA-01 was exploitable in production (see Deploying, step 1).
+
+## What could not be verified statically
+
+- **Production env.** `ADMIN_EMAILS` (SA-01 exposure), the length of `SESSION_SECRET` (SA-13 now
+  enforces at least 32 characters), and whether `SOLANA_RPC_URL` matches the cluster (SA-06 now
+  enforces it).
+- **Supabase dashboard.** The auth redirect allowlist, email rate limits, CAPTCHA, and the
+  default privileges in `public`.
+- **Wallet behaviour.** That Phantom and Solflare render the SIWS message cleanly and warn on a
+  domain mismatch (both document this, but I couldn't run a wallet here).
+- **The schema changes** in `supabase/schema.sql`. There is no local Postgres, so the SQL is
+  reviewed but not executed.
+- **Next.js advisory details** (SA-04). I couldn't read them offline, so the "preconditions not
+  met" judgement is a suspicion. The upgrade makes it moot.
+- **Vercel's HSTS header** and whether Vercel overwrites `x-forwarded-for` (which the limiter
+  relies on). Both are Vercel defaults, but check with `curl -I`.
+- **Live chain behaviour:** the finalized-commitment latency and the genesis check against your
+  paid RPC.
+
+## Deploying these fixes
+
+1. **Check SA-01 exposure first.** In Vercel, check whether `ADMIN_EMAILS` is set. If it is, look in
+   `users` for wallet rows carrying one of those emails (query under
+   Needs decision, item 3). Any such row is someone who could have reached the desk.
+2. **Check `SESSION_SECRET` is at least 32 characters** in Vercel. If it is shorter, the site
+   treats it as missing and nobody can sign in. Regenerate it with `openssl rand -base64 32`.
+3. **Re-run `supabase/schema.sql`** in the SQL editor. It is idempotent. It adds the
+   one-open-intent index (SA-12) and the updated `anonymize_user()` (SA-02).
+4. Deploy. Every member is signed out once (SA-13) and signs the new SIWS message on next connect.
+5. **Don't push this branch, or this file, to the public GitHub repo until the deploy is live.**
+   It describes exploitable issues in the currently deployed version.
+
+## Manual tests on devnet
+
+Run against a preview deployment with `NEXT_PUBLIC_SOLANA_CLUSTER=devnet` and a devnet
+`SOLANA_RPC_URL`.
+
+1. **Sign-in.** Connect Phantom, then Solflare. The prompt shows
+   "<your host> wants you to sign in…" with no domain warning, and sign-in succeeds. Old cookies
+   are signed out.
+2. **Admin.** An `ADMIN_WALLETS` wallet sees `/admin`. A normal wallet that submitted a request
+   with an admin email as contact does **not**.
+3. **Pay SOL and USDC.** Lock, pay and verify. The booking goes to `paid` after about 15–30 s
+   (finalized). The Telegram alert arrives.
+4. **Superseded lock.** Lock a rate and leave the panel open. Re-quote from `/admin`, then pay
+   from the old panel. Expect "desk will reconcile" (`needs_review`), the booking not paid, and a
+   Telegram "Payment needs review" naming the earlier quote.
+5. **Cancelled booking.** Lock, cancel from `/admin`, then pay. Expect `needs_review`.
+6. **Switched account.** Sign in, switch the Phantom account, press pay. The panel refuses before
+   opening the wallet.
+7. **Email-only member.** Sign in by magic link. The pay panel can't lock a rate (403 message).
+8. **Cluster check.** Set `SOLANA_RPC_URL` to mainnet while the cluster says devnet. Verify
+   answers "not fully configured" (503) instead of reading the chain.
+9. **RPC proxy.** Signed out, `curl -X POST https://<preview>/api/rpc` returns 401.
+10. **Headers and CSRF.** `curl -I https://<preview>/` shows the security headers and HSTS.
+    `curl -X POST -H "Origin: https://evil.example" https://<preview>/api/auth/logout` returns 403.
+11. **Magic link.** Sign in by email and land on `/account`. Hand-edit `next=//example.com` on a
+    callback URL and confirm it never leaves the site.
