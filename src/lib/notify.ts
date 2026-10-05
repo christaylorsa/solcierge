@@ -126,7 +126,8 @@ export async function notifyPayment(input: {
   amount: string | number
   amountUsd: string | number
   signature: string
-  late: boolean
+  /** Why the desk must reconcile this by hand, or null when it settled automatically. */
+  review: string | null
 }) {
   const { data } = await supabaseAdmin()
     .from('booking_requests')
@@ -135,7 +136,7 @@ export async function notifyPayment(input: {
     .maybeSingle()
 
   const usdAmount = Number(input.amountUsd).toLocaleString('en-US', { style: 'currency', currency: 'USD' })
-  const title = input.late
+  const title = input.review
     ? `Payment needs review: ${usdAmount}`
     : `Paid: ${usdAmount}${data ? ` for ${categoryName(data.category)}` : ''}`
 
@@ -143,13 +144,11 @@ export async function notifyPayment(input: {
     title,
     lines: [
       `${input.amount} ${input.token} received in the treasury.`,
-      ...(input.late
-        ? ['It landed after the 10-minute rate lock expired. Check the amount and confirm the booking by hand.']
-        : []),
+      ...(input.review ? [`${input.review} Check the amount and confirm the booking by hand.`] : []),
       ...(data ? ['', ...describeRoute((data.details ?? {}) as RequestDetails)] : []),
       '',
       `Transaction: ${explorerTxUrl(input.signature)}`,
     ],
-    link: { label: 'Open the desk', href: `${publicEnv.siteUrl}/admin?status=${input.late ? 'quoted' : 'paid'}` },
+    link: { label: 'Open the desk', href: `${publicEnv.siteUrl}/admin${input.review ? '' : '?status=paid'}` },
   })
 }

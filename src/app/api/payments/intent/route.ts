@@ -56,6 +56,11 @@ export async function POST(request: Request) {
     if (!booking.quote) {
       return fail('There is no quote on that request yet. The desk is still sourcing.', 409)
     }
+    // A pending request with an old quote attached is one the desk took back to
+    // sourcing. Only a live quote can be paid (SA-05).
+    if (booking.status !== 'quoted') {
+      return fail('The desk is reworking this quote. It will reappear here when it is ready.', 409)
+    }
     if (Date.parse(booking.quote.expires_at) < Date.now()) {
       return fail('That quote has expired. Ask the desk to refresh it, prices move.', 409)
     }

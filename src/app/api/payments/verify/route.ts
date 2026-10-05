@@ -2,6 +2,8 @@ import { after } from 'next/server'
 import { z } from 'zod'
 import { fail, handleError, ok, readJson } from '@/lib/api'
 import { requireViewer } from '@/lib/auth'
+import { getRequest } from '@/lib/data'
+import { decideSettlement } from '@/lib/payments/settlement'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { verifyTransfer } from '@/lib/solana/verify'
 import { fetchTransaction } from '@/lib/solana/connection'
@@ -63,16 +65,11 @@ export async function POST(request: Request) {
     if (!intentRow.data) return fail('That payment session no longer exists. Reopen the quote.', 404)
     const intent = intentRow.data as PaymentIntent
 
-    // Ownership: the intent's request must belong to the caller.
-    const booking = await db
-      .from('booking_requests')
-      .select('id, user_id, status')
-      .eq('id', intent.request_id)
-      .eq('user_id', viewer.id)
-      .maybeSingle()
-
-    if (booking.error) throw new Error(booking.error.message)
-    if (!booking.data) return fail('That payment does not belong to your account.', 403)
+    // Ownership: the intent's request must belong to the caller. This also loads the
+    // booking's status and newest quote, which decide whether a proven transfer may
+    // settle it automatically.
+    const booking = await getRequest(intent.request_id, viewer.id)
+    if (!booking) return fail('That payment does not belong to your account.', 403)
 
     // --- idempotency and replay -------------------------------------------
     const existing = await db
@@ -96,7 +93,7 @@ export async function POST(request: Request) {
       })
     }
 
-    if (booking.data.status === 'paid' || booking.data.status === 'fulfilled') {
+    if (booking.status === 'paid' || booking.status === 'fulfilled') {
       return ok({
         outcome: 'already_paid' satisfies VerifyOutcome,
         message: 'This booking is already settled.',
@@ -132,11 +129,20 @@ export async function POST(request: Request) {
     }
 
     // --- the transfer is real --------------------------------------------
-    // Landing after the lock expired is not the member's fault and the funds have
-    // moved, so we always record it. Well past the grace window it goes to the desk
-    // for reconciliation rather than auto-confirming against a stale rate.
-    const lockDeadline = Date.parse(intent.expires_at) / 1000 + LATE_GRACE_SECONDS
-    const late = result.blockTime !== null && result.blockTime > lockDeadline
+    // The funds have moved, so the payment is always recorded. It settles the booking
+    // automatically only against the live lock on the live quote of a booking still
+    // waiting for payment; anything else (a late landing, a superseded lock, a
+    // cancelled booking) goes to the desk with the reason.
+    const settlement = decideSettlement({
+      bookingStatus: booking.status,
+      intentStatus: intent.status,
+      intentQuoteId: intent.quote_id,
+      currentQuoteId: booking.quote?.id ?? null,
+      blockTime: result.blockTime,
+      lockExpiresAt: Date.parse(intent.expires_at) / 1000,
+      graceSeconds: LATE_GRACE_SECONDS,
+    })
+    const review = settlement.kind === 'review' ? settlement.reason : null
 
     const recorded = await db
       .from('payments')
@@ -173,17 +179,17 @@ export async function POST(request: Request) {
         amount: result.observedAmount,
         amountUsd: intent.amount_usd,
         signature,
-        late,
+        review,
       }),
     )
 
-    if (late) {
-      console.warn('[solcierge] payment landed outside its rate lock', { intent: intent.id, signature })
+    if (review) {
+      console.warn('[solcierge] payment needs review', { intent: intent.id, signature, review })
       return ok({
         outcome: 'needs_review' satisfies VerifyOutcome,
         payment: recorded.data,
         message:
-          'We can see your transfer on chain, but it landed after the rate lock expired. The desk will reconcile it and confirm with you, nothing further is needed from you.',
+          'We can see your transfer on chain, but it does not match the live quote and rate lock, so the desk will reconcile it and confirm with you. Nothing further is needed from you.',
       })
     }
 
