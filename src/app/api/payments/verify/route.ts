@@ -8,7 +8,7 @@ import { createLimiter } from '@/lib/ratelimit'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { verifyTransfer } from '@/lib/solana/verify'
 import { fetchTransaction } from '@/lib/solana/connection'
-import { notifyPayment } from '@/lib/notify'
+import { notifyMemberPassengersNeeded, notifyPayment } from '@/lib/notify'
 import type { PaymentIntent } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
@@ -232,6 +232,14 @@ export async function POST(request: Request) {
         review,
       }),
     )
+
+    if (!review && booking.category === 'jets') {
+      after(() =>
+        notifyMemberPassengersNeeded(intent.request_id).catch((cause) =>
+          console.error('[solcierge] member alert failed:', cause),
+        ),
+      )
+    }
 
     if (review) {
       console.warn('[solcierge] payment needs review', { intent: intent.id, signature, review })

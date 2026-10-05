@@ -241,3 +241,35 @@ export function notifyMemberPaperwork(requestId: string) {
     linkLabel: 'Open your booking',
   }))
 }
+
+// --- passengers -----------------------------------------------------------------
+
+/** To the desk: a member has submitted or changed the passengers on a flight. Names only, never passports. */
+export async function notifyPassengersReceived(input: { requestId: string; count: number; updated: boolean }) {
+  const { data } = await supabaseAdmin()
+    .from('booking_requests')
+    .select('category, details')
+    .eq('id', input.requestId)
+    .maybeSingle()
+
+  await send({
+    title: input.updated ? 'Passenger details updated' : 'Passenger details received',
+    lines: [
+      ...(data ? describeRoute((data.details ?? {}) as RequestDetails) : []),
+      `${input.count} ${input.count === 1 ? 'passenger' : 'passengers'}. Ready to send to the operator.`,
+    ],
+    link: { label: 'Open the desk', href: `${publicEnv.siteUrl}/admin?status=paid` },
+  })
+}
+
+/** To the member, after a flight is paid: the operator needs the passenger list. */
+export function notifyMemberPassengersNeeded(requestId: string) {
+  return sendToMember(requestId, (headline) => ({
+    title: 'Payment received: add your passenger details',
+    lines: [
+      headline,
+      'To confirm with the operator we need each passenger’s name, date of birth, nationality and passport details.',
+    ],
+    linkLabel: 'Add passenger details',
+  }))
+}

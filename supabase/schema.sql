@@ -211,6 +211,42 @@ create unique index if not exists users_telegram_link_code_key
 create index if not exists users_telegram_chat_idx
   on public.users (telegram_chat_id) where telegram_chat_id is not null;
 
+-- --- passenger manifests (flights) ------------------------------------------
+
+-- One manifest per booking. The passengers (name, date of birth, nationality,
+-- passport number and expiry) are encrypted by the app with AES-256-GCM before
+-- they reach the database, so this table only ever holds ciphertext.
+create table if not exists public.booking_manifests (
+  request_id        uuid primary key references public.booking_requests (id) on delete cascade,
+  passengers_sealed text not null,
+  passenger_count   int not null check (passenger_count between 1 and 20),
+  -- 30 days after the last travel date. Deleted by the job below.
+  purge_after       timestamptz not null,
+  submitted_at      timestamptz not null default now(),
+  updated_at        timestamptz not null default now()
+);
+
+create index if not exists booking_manifests_purge_idx on public.booking_manifests (purge_after);
+
+alter table public.booking_manifests enable row level security;
+revoke all on public.booking_manifests from anon, authenticated;
+grant all on public.booking_manifests to service_role;
+
+-- Daily purge of manifests past their date. The app also purges whenever the desk
+-- loads them, so a project without pg_cron still never shows expired data.
+do $outer$
+begin
+  create extension if not exists pg_cron;
+  perform cron.schedule(
+    'purge-passenger-manifests',
+    '17 3 * * *',
+    $job$delete from public.booking_manifests where purge_after < now()$job$
+  );
+exception when others then
+  raise notice 'pg_cron is not available (%), relying on the app-side purge', sqlerrm;
+end
+$outer$;
+
 -- --- updated_at ------------------------------------------------------------
 
 create or replace function public.touch_updated_at()
@@ -239,14 +275,16 @@ alter table public.payment_intents  enable row level security;
 alter table public.payments         enable row level security;
 
 revoke all on public.users, public.booking_requests, public.quotes,
-              public.payment_intents, public.payments, public.booking_documents
+              public.payment_intents, public.payments, public.booking_documents,
+              public.booking_manifests
   from anon, authenticated;
 
 -- Newer Supabase projects can be created without default table grants, so the
 -- service role gets its access explicitly rather than by project setting.
 grant usage on schema public to service_role;
 grant all on public.users, public.booking_requests, public.quotes,
-             public.payment_intents, public.payments, public.booking_documents
+             public.payment_intents, public.payments, public.booking_documents,
+             public.booking_manifests
   to service_role;
 
 -- --- retention and erasure -------------------------------------------------
@@ -256,9 +294,9 @@ grant all on public.users, public.booking_requests, public.quotes,
 --
 --   select public.anonymize_user('<user id>');
 --
--- That clears the member's name, email, wallet and Telegram link and strips the
--- free-text brief and typed contact details from their requests, while bookings,
--- quotes and payments remain. Uploaded documents are not touched: Postgres cannot
+-- That clears the member's name, email, wallet and Telegram link, deletes their
+-- passenger manifests, and strips the free-text brief and typed contact details
+-- from their requests, while bookings, quotes and payments remain. Uploaded documents are not touched: Postgres cannot
 -- delete Storage files, so remove the booking's folder in the Storage dashboard.
 
 alter table public.users add column if not exists anonymized_at timestamptz;
@@ -290,6 +328,9 @@ begin
   update public.booking_requests
      set details = details - 'details' - 'contact_name' - 'contact_email'
    where user_id = target;
+
+  delete from public.booking_manifests
+   where request_id in (select id from public.booking_requests where user_id = target);
 end $$;
 
 revoke all on function public.anonymize_user(uuid) from public, anon, authenticated;

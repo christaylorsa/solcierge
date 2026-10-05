@@ -124,6 +124,7 @@ const PAGES: Record<string, Page> = {
         body: [
           'Your wallet address, which is your account identity. Optionally a name and email for confirmations. The content of your requests, the quotes we issue, and the signature of any payment.',
           'Once a booking is confirmed, the booking reference, itinerary and documents the supplier issues, such as tickets and vouchers. These sit in private storage that only you, signed in, and the desk can open.',
+          'For flights, each passenger\'s full name, date of birth, nationality and passport number and expiry, because the aircraft operator must file them with border authorities. These are encrypted before they are stored, seen only by the desk and the operator, and deleted automatically after the trip, or straight away if the booking is cancelled.',
           'If you connect Telegram, the id of that chat, so we can send you booking updates. Send /stop to the bot, or disconnect on your account page, and we forget it.',
           'We do not store private keys, seed phrases, or card details. We never ask for them, and no part of this product has a field for them.',
         ],

@@ -3,6 +3,8 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { PayPanel } from '@/components/pay/PayPanel'
 import { Paperwork, hasPaperwork } from '@/components/account/Paperwork'
+import { PassengerForm } from '@/components/account/PassengerForm'
+import { PassengerList } from '@/components/account/PassengerList'
 import { TelegramConnect } from '@/components/account/TelegramConnect'
 import { RequestDetails } from '@/components/account/RequestDetails'
 import { StatusPill } from '@/components/account/StatusPill'
@@ -10,6 +12,8 @@ import { SignedOutPanel } from '@/components/account/SignedOutPanel'
 import { Section, SectionHead } from '@/components/site/Section'
 import { getViewer } from '@/lib/auth'
 import { getRequest, hasTelegramLinked } from '@/lib/data'
+import { getManifest } from '@/lib/manifests'
+import { lastTravelDate } from '@/lib/passengers'
 import { categoryName } from '@/lib/categories'
 import { explorerTxUrl } from '@/lib/env'
 import { STATUS_COPY, formatDateTime, relativeTime, shortAddress, sol, usd, usdc } from '@/lib/format'
@@ -39,6 +43,12 @@ export default async function RequestPage({
 
   const [request, telegramLinked] = await Promise.all([getRequest(id, viewer.id), hasTelegramLinked(viewer.id)])
   if (!request) notFound()
+
+  // Flights collect a passenger list once paid; it locks when the desk confirms.
+  const isFlight = request.category === 'jets'
+  const manifest =
+    isFlight && (request.status === 'paid' || request.status === 'fulfilled') ? await getManifest(request.id) : null
+  const needsPassengers = isFlight && request.status === 'paid' && !manifest
 
   const quote = request.quote
   const quoteLive = quote ? Date.parse(quote.expires_at) > Date.now() : false
@@ -77,7 +87,20 @@ export default async function RequestPage({
 
       <div className="mt-14 grid gap-12 lg:grid-cols-[1.4fr_1fr] lg:gap-16">
         <div className="space-y-12">
+          {isFlight && request.status === 'paid' ? (
+            <PassengerForm
+              requestId={request.id}
+              initial={manifest?.passengers ?? null}
+              partySize={request.details?.party_size ?? null}
+              travelDate={lastTravelDate(request.details ?? {})}
+            />
+          ) : null}
+
           {hasPaperwork(request) ? <Paperwork request={request} /> : null}
+
+          {isFlight && request.status === 'fulfilled' && manifest?.passengers ? (
+            <PassengerList passengers={manifest.passengers} />
+          ) : null}
 
           <div className="border border-line bg-surface p-6 sm:p-7">
             <h2 className="eyebrow">Your request</h2>
@@ -165,7 +188,9 @@ export default async function RequestPage({
             <div className="border border-line bg-surface p-6 sm:p-7">
               <p className="eyebrow">{STATUS_COPY[request.status].label}</p>
               <p className="mt-4 text-sm leading-relaxed text-muted">
-                {waitingCopy(request.status)}
+                {needsPassengers
+                  ? 'Payment received and verified on chain. Next, add the passenger details so we can confirm your flight with the operator.'
+                  : waitingCopy(request.status)}
               </p>
               {request.status === 'pending' ? (
                 <p className="mt-6 text-xs leading-relaxed text-faint">

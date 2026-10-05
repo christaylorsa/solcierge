@@ -2,6 +2,7 @@ import { after } from 'next/server'
 import { z } from 'zod'
 import { fail, handleError, ok, readJson } from '@/lib/api'
 import { requireAdmin } from '@/lib/auth'
+import { deleteManifest } from '@/lib/manifests'
 import { notifyMemberConfirmed } from '@/lib/notify'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { REQUEST_STATUSES, type RequestStatus } from '@/lib/types'
@@ -64,6 +65,8 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     }
 
     if (next === 'cancelled') {
+      // Nothing to send to an operator any more, so passport details go now.
+      await deleteManifest(id)
       await db.from('payment_intents').update({ status: 'expired' }).eq('request_id', id).eq('status', 'open')
     }
 

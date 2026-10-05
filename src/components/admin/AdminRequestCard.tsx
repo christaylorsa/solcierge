@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { PaperworkEditor } from './PaperworkEditor'
+import { PassengerManifest, type ManifestView } from './PassengerManifest'
 import { QuoteEditor } from './QuoteEditor'
 import { RequestDetails } from '@/components/account/RequestDetails'
 import { StatusPill } from '@/components/account/StatusPill'
@@ -26,7 +27,7 @@ const NEXT: Record<RequestStatus, { status: RequestStatus; label: string }[]> = 
   cancelled: [{ status: 'pending', label: 'Reopen' }],
 }
 
-export function AdminRequestCard({ request }: { request: BookingRequestFull }) {
+export function AdminRequestCard({ request, manifest }: { request: BookingRequestFull; manifest: ManifestView | null }) {
   const router = useRouter()
   const [open, setOpen] = useState(request.status === 'pending' || request.status === 'paid')
   const [busy, setBusy] = useState<RequestStatus | null>(null)
@@ -35,6 +36,7 @@ export function AdminRequestCard({ request }: { request: BookingRequestFull }) {
   const quote = request.quote
   const quoteLive = quote ? Date.parse(quote.expires_at) > Date.now() : false
 
+  const isFlight = request.category === 'jets'
   const hasPaperwork = Boolean(request.confirmation_ref || request.itinerary || request.documents.length > 0)
   const memberReach = {
     telegram: Boolean(request.user?.telegram_chat_id),
@@ -42,12 +44,16 @@ export function AdminRequestCard({ request }: { request: BookingRequestFull }) {
   }
 
   async function move(status: RequestStatus) {
+    const missing = [
+      isFlight && !manifest ? 'passenger details' : null,
+      !hasPaperwork ? 'paperwork' : null,
+    ].filter(Boolean)
     if (
       status === 'fulfilled' &&
       !window.confirm(
-        hasPaperwork
-          ? 'Confirm this booking? The client is told it is confirmed and that their paperwork is ready.'
-          : 'No paperwork has been added yet. Confirm anyway? The client is told their paperwork is ready.',
+        missing.length === 0
+          ? 'Confirm this booking? The client is told it is confirmed and that their paperwork is ready. Their passenger list locks.'
+          : `No ${missing.join(' or ')} yet. Confirm anyway? The client is told it is confirmed and that their paperwork is ready.`,
       )
     ) {
       return
@@ -147,6 +153,17 @@ export function AdminRequestCard({ request }: { request: BookingRequestFull }) {
                   >
                     {shortAddress(request.payment.tx_signature, 8)}
                   </a>
+                </div>
+              ) : null}
+
+              {isFlight && (request.status === 'paid' || request.status === 'fulfilled') ? (
+                <div className="mt-8 border-t border-line pt-6">
+                  <h3 className="eyebrow">
+                    Passengers{manifest ? ` · ${manifest.passenger_count}` : ''}
+                  </h3>
+                  <div className="mt-4">
+                    <PassengerManifest manifest={manifest} waiting={request.status === 'paid'} />
+                  </div>
                 </div>
               ) : null}
 
