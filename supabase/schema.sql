@@ -35,14 +35,19 @@ create table if not exists public.users (
   email          text unique,
   name           text,
   created_at     timestamptz not null default now(),
-  constraint users_identity_present check (wallet_address is not null or email is not null)
+  -- Set by anonymize_user(). An anonymised member keeps their id, so their
+  -- bookings and payments stay intact for the records we must retain.
+  anonymized_at  timestamptz,
+  constraint users_identity_present check (
+    wallet_address is not null or email is not null or anonymized_at is not null
+  )
 );
 
 -- --- booking_requests ------------------------------------------------------
 
 create table if not exists public.booking_requests (
   id         uuid primary key default gen_random_uuid(),
-  user_id    uuid not null references public.users (id) on delete cascade,
+  user_id    uuid not null references public.users (id) on delete restrict,
   category   request_category not null,
   details    jsonb not null default '{}'::jsonb,
   budget_min numeric(14, 2),
@@ -112,7 +117,7 @@ create index if not exists payment_intents_request_idx on public.payment_intents
 
 create table if not exists public.payments (
   id           uuid primary key default gen_random_uuid(),
-  request_id   uuid not null references public.booking_requests (id) on delete cascade,
+  request_id   uuid not null references public.booking_requests (id) on delete restrict,
   intent_id    uuid references public.payment_intents (id) on delete set null,
   tx_signature text not null unique,
   token        payment_token not null,
@@ -161,3 +166,42 @@ grant usage on schema public to service_role;
 grant all on public.users, public.booking_requests, public.quotes,
              public.payment_intents, public.payments
   to service_role;
+
+-- --- retention and erasure -------------------------------------------------
+-- Payment records must be kept for tax and AML purposes (typically 6 to 7
+-- years) even when a member asks to be forgotten. So deleting a member, or a
+-- booking that has payments, is refused, and erasure is done by anonymising:
+--
+--   select public.anonymize_user('<user id>');
+--
+-- That clears the member's name, email and wallet and strips the free-text
+-- brief from their requests, while bookings, quotes and payments remain.
+
+alter table public.users add column if not exists anonymized_at timestamptz;
+alter table public.users drop constraint if exists users_identity_present;
+alter table public.users add constraint users_identity_present check (
+  wallet_address is not null or email is not null or anonymized_at is not null
+);
+
+alter table public.booking_requests drop constraint if exists booking_requests_user_id_fkey;
+alter table public.booking_requests add constraint booking_requests_user_id_fkey
+  foreign key (user_id) references public.users (id) on delete restrict;
+
+alter table public.payments drop constraint if exists payments_request_id_fkey;
+alter table public.payments add constraint payments_request_id_fkey
+  foreign key (request_id) references public.booking_requests (id) on delete restrict;
+
+create or replace function public.anonymize_user(target uuid)
+returns void language plpgsql as $$
+begin
+  update public.users
+     set name = null, email = null, wallet_address = null, anonymized_at = now()
+   where id = target;
+
+  update public.booking_requests
+     set details = details - 'details'
+   where user_id = target;
+end $$;
+
+revoke all on function public.anonymize_user(uuid) from public, anon, authenticated;
+grant execute on function public.anonymize_user(uuid) to service_role;
