@@ -1,5 +1,8 @@
-import { fail } from '@/lib/api'
+import { fail, handleError } from '@/lib/api'
 import { serverEnv } from '@/lib/env'
+import { clientIp, createLimiter } from '@/lib/ratelimit'
+import { checkRpcBody } from '@/lib/rpc-policy'
+import { readWalletSession } from '@/lib/session'
 
 export const dynamic = 'force-dynamic'
 
@@ -9,63 +12,44 @@ export const dynamic = 'force-dynamic'
  * Mainnet's public endpoint refuses most browser traffic, and pointing the browser
  * at a paid provider would publish its API key. Instead the browser talks to this
  * route and the request is forwarded to SOLANA_RPC_URL, which never leaves the
- * server. Only the methods the pay flow and wallet adapter need are forwarded, so
- * this cannot be used as a general-purpose proxy onto the provider's quota.
+ * server. Only the methods the pay flow and wallet adapter need are forwarded, and
+ * only for a signed-in wallet within a rate limit, so this cannot be used as a
+ * general-purpose relay onto the provider's quota (SA-08). The pay panel is the only
+ * caller, and it always has a wallet session.
  */
-const ALLOWED_METHODS = new Set([
-  'getLatestBlockhash',
-  'isBlockhashValid',
-  'getBlockHeight',
-  'getSlot',
-  'getEpochInfo',
-  'getGenesisHash',
-  'getBalance',
-  'getAccountInfo',
-  'getMultipleAccounts',
-  'getTokenAccountBalance',
-  'getMinimumBalanceForRentExemption',
-  'getFeeForMessage',
-  'getRecentPrioritizationFees',
-  'getSignatureStatuses',
-  'simulateTransaction',
-  'sendTransaction',
-])
 
-const MAX_BODY_BYTES = 64 * 1024
-const MAX_BATCH = 10
-
-type RpcCall = { method?: unknown }
+// A payment is roughly 30 calls (blockhash, account reads, send, status polling).
+const perWallet = createLimiter({ limit: 120, windowMs: 60_000 })
+const perIp = createLimiter({ limit: 240, windowMs: 60_000 })
 
 export async function POST(request: Request) {
-  const raw = await request.text()
-  if (raw.length > MAX_BODY_BYTES) return fail('Request too large.', 413)
-
-  let parsed: RpcCall | RpcCall[]
   try {
-    parsed = JSON.parse(raw)
-  } catch {
-    return fail('Invalid JSON-RPC body.')
-  }
+    const session = await readWalletSession()
+    if (!session) return fail('Sign in with your wallet to continue.', 401)
+    if (!perIp.take(clientIp(request)) || !perWallet.take(session.wallet)) {
+      return fail('Too many network requests. Wait a moment and try again.', 429)
+    }
 
-  const calls = Array.isArray(parsed) ? parsed : [parsed]
-  if (calls.length === 0 || calls.length > MAX_BATCH) return fail('Invalid batch size.')
-  const blocked = calls.find((call) => typeof call?.method !== 'string' || !ALLOWED_METHODS.has(call.method))
-  if (blocked) return fail(`RPC method not allowed: ${String(blocked?.method)}`, 403)
+    const checked = checkRpcBody(await request.text())
+    if ('error' in checked) return fail(checked.error, checked.status)
 
-  try {
-    const upstream = await fetch(serverEnv().rpcUrl, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: raw,
-      cache: 'no-store',
-      signal: AbortSignal.timeout(15_000),
-    })
-    return new Response(upstream.body, {
-      status: upstream.status,
-      headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
-    })
+    try {
+      const upstream = await fetch(serverEnv().rpcUrl, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: checked.raw,
+        cache: 'no-store',
+        signal: AbortSignal.timeout(15_000),
+      })
+      return new Response(upstream.body, {
+        status: upstream.status,
+        headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
+      })
+    } catch (error) {
+      console.error('[solcierge] rpc proxy error:', error)
+      return fail('The Solana network could not be reached. Try again in a moment.', 502)
+    }
   } catch (error) {
-    console.error('[solcierge] rpc proxy error:', error)
-    return fail('The Solana network could not be reached. Try again in a moment.', 502)
+    return handleError(error)
   }
 }
