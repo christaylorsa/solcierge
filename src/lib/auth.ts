@@ -1,3 +1,4 @@
+import { isAdminIdentity } from '@/lib/admin'
 import { serverEnv } from '@/lib/env'
 import { readWalletSession } from '@/lib/session'
 import { supabaseAdmin } from '@/lib/supabase/admin'
@@ -21,6 +22,7 @@ export async function getViewer(): Promise<Viewer | null> {
   } catch {
     return null
   }
+  const allow = { wallets: env.adminWallets, emails: env.adminEmails }
 
   const walletSession = await readWalletSession()
   if (walletSession) {
@@ -36,7 +38,8 @@ export async function getViewer(): Promise<Viewer | null> {
         wallet_address: data.wallet_address,
         email: data.email,
         name: data.name,
-        isAdmin: isAdminIdentity(data.wallet_address, data.email),
+        // Judged on the signed-in wallet only. users.email is member-writable.
+        isAdmin: isAdminIdentity({ kind: 'wallet', wallet: walletSession.wallet }, allow),
       }
     }
   }
@@ -60,13 +63,8 @@ export async function getViewer(): Promise<Viewer | null> {
     wallet_address: user.wallet_address,
     email: user.email,
     name: user.name,
-    isAdmin: isAdminIdentity(user.wallet_address, user.email),
-  }
-
-  function isAdminIdentity(wallet: string | null, mail: string | null): boolean {
-    if (wallet && env.adminWallets.includes(wallet)) return true
-    if (mail && env.adminEmails.includes(mail.toLowerCase())) return true
-    return false
+    // Judged on the email Supabase verified for this session, not the row's columns.
+    isAdmin: isAdminIdentity({ kind: 'email', email }, allow),
   }
 }
 
