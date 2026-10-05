@@ -8,6 +8,7 @@ import { Countdown } from './Countdown'
 import { RateLockRing } from '@/components/motion/RateLockRing'
 import { useSession } from '@/components/auth/SessionProvider'
 import { buildTransferTransaction, TransferSetupError } from '@/lib/solana/transfer'
+import { payingWalletProblem } from '@/lib/pay-guard'
 import { explorerTxUrl, publicEnv } from '@/lib/env'
 import { formatDateTime, shortAddress, sol, usd, usdc } from '@/lib/format'
 import { TERMS_LINKS, TERMS_VERSION } from '@/lib/terms'
@@ -152,6 +153,13 @@ export function PayPanel({ requestId, quote }: { requestId: string; quote: Quote
 
   async function pay() {
     if (!intent || !publicKey) return
+
+    // Only the signed-in wallet's transfer verifies; anything else would strand funds.
+    const walletProblem = payingWalletProblem(publicKey.toBase58(), viewer?.wallet_address ?? null)
+    if (walletProblem) {
+      setError(walletProblem)
+      return
+    }
 
     setError(null)
     setPhase('signing')
