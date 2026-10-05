@@ -24,6 +24,9 @@ const schema = z.object({
 // to 20 times per payment.
 const perMember = createLimiter({ limit: 60, windowMs: 60_000 })
 
+const NEEDS_REVIEW_MESSAGE =
+  'We can see your transfer on chain, but it does not match the live quote and rate lock, so the desk will reconcile it and confirm with you. Nothing further is needed from you.'
+
 /** Grace after the lock expires during which a landed transfer is still auto-accepted. */
 const LATE_GRACE_SECONDS = 300
 
@@ -90,6 +93,15 @@ export async function POST(request: Request) {
         // The same transfer cannot settle two bookings.
         return fail('That transaction has already been used to settle a different booking.', 409, {
           outcome: 'mismatch' satisfies VerifyOutcome,
+        })
+      }
+      // Recorded before, but only settled if the booking actually moved to paid; a
+      // transfer that went to review must keep saying so when it is re-submitted.
+      if (booking.status !== 'paid' && booking.status !== 'fulfilled') {
+        return ok({
+          outcome: 'needs_review' satisfies VerifyOutcome,
+          payment: existing.data,
+          message: NEEDS_REVIEW_MESSAGE,
         })
       }
       return ok({
@@ -226,8 +238,7 @@ export async function POST(request: Request) {
       return ok({
         outcome: 'needs_review' satisfies VerifyOutcome,
         payment: recorded.data,
-        message:
-          'We can see your transfer on chain, but it does not match the live quote and rate lock, so the desk will reconcile it and confirm with you. Nothing further is needed from you.',
+        message: NEEDS_REVIEW_MESSAGE,
       })
     }
 
