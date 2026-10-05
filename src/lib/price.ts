@@ -1,4 +1,5 @@
 import { serverEnv } from '@/lib/env'
+import { reconcilePrices } from '@/lib/price-check'
 
 export const WRAPPED_SOL_MINT = 'So11111111111111111111111111111111111111112'
 
@@ -53,26 +54,31 @@ async function fromCoinGecko(): Promise<SolPrice> {
 }
 
 /**
- * Live SOL/USD. Tries the configured source, falls back to the other one.
- * Throws only when both are unreachable, which the pay panel surfaces as a
- * retryable error rather than a broken page.
+ * Live SOL/USD. Asks both sources at once and cross-checks them (SA-09): the
+ * configured source wins when they agree, either one is used alone when the other
+ * is down, and a disagreement beyond MAX_DIVERGENCE refuses rather than guesses.
+ * Throws with a "No SOL price" message in those cases, which the pay panel surfaces
+ * as a retryable error rather than a broken page.
  */
 export async function getSolPrice(): Promise<SolPrice> {
   if (cache && cache.expiresAt > Date.now()) return cache.price
 
   const env = serverEnv()
   const order = env.priceSource === 'coingecko' ? [fromCoinGecko, fromJupiter] : [fromJupiter, fromCoinGecko]
+  const [primary, secondary] = await Promise.allSettled(order.map((attempt) => attempt()))
 
-  const failures: string[] = []
-  for (const attempt of order) {
-    try {
-      const price = await attempt()
-      cache = { price, expiresAt: Date.now() + CACHE_MS }
-      return price
-    } catch (error) {
-      failures.push(error instanceof Error ? error.message : String(error))
-    }
+  const value = (result: PromiseSettledResult<SolPrice>) => (result.status === 'fulfilled' ? result.value : null)
+  const reconciled = reconcilePrices(value(primary)?.usd ?? null, value(secondary)?.usd ?? null)
+
+  if ('error' in reconciled) {
+    const failures = [primary, secondary]
+      .filter((result): result is PromiseRejectedResult => result.status === 'rejected')
+      .map((result) => (result.reason instanceof Error ? result.reason.message : String(result.reason)))
+    console.warn('[solcierge] SOL price refused:', reconciled.error, failures)
+    throw new Error(`No SOL price available (${[reconciled.error, ...failures].join('; ')})`)
   }
 
-  throw new Error(`No SOL price available (${failures.join('; ')})`)
+  const price = value(reconciled.from === 'primary' ? primary : secondary) as SolPrice
+  cache = { price, expiresAt: Date.now() + CACHE_MS }
+  return price
 }
