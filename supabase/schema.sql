@@ -93,8 +93,16 @@ create table if not exists public.payment_intents (
   mint          text,
   status        intent_status not null default 'open',
   expires_at    timestamptz not null,
+  -- Which version of the legal pages the member accepted, and when. Evidence of
+  -- the contract: the pay panel will not lock a rate until the terms are accepted.
+  terms_version     text,
+  terms_accepted_at timestamptz,
   created_at    timestamptz not null default now()
 );
+
+-- Existing databases created before the acceptance columns.
+alter table public.payment_intents add column if not exists terms_version text;
+alter table public.payment_intents add column if not exists terms_accepted_at timestamptz;
 
 create index if not exists payment_intents_request_idx on public.payment_intents (request_id, created_at desc);
 

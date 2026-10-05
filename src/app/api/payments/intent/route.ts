@@ -5,12 +5,15 @@ import { getRequest } from '@/lib/data'
 import { serverEnv } from '@/lib/env'
 import { getSolPrice } from '@/lib/price'
 import { supabaseAdmin } from '@/lib/supabase/admin'
+import { TERMS_VERSION } from '@/lib/terms'
 
 export const dynamic = 'force-dynamic'
 
 const schema = z.object({
   request_id: z.string().uuid(),
   token: z.enum(['SOL', 'USDC']),
+  accept_terms: z.literal(true),
+  terms_version: z.string(),
 })
 
 /**
@@ -27,8 +30,14 @@ export async function POST(request: Request) {
     const env = serverEnv()
 
     const parsed = schema.safeParse(await readJson<unknown>(request))
-    if (!parsed.success) return fail('Pick SOL or USDC to continue.', 422)
-    const { request_id, token } = parsed.data
+    if (!parsed.success) {
+      const missingTerms = parsed.error.issues.some((issue) => issue.path[0] === 'accept_terms')
+      return fail(missingTerms ? 'Accept the terms to continue.' : 'Pick SOL or USDC to continue.', 422)
+    }
+    const { request_id, token, terms_version } = parsed.data
+    if (terms_version !== TERMS_VERSION) {
+      return fail('Our terms have been updated since this page loaded. Refresh to read and accept the current version.', 409)
+    }
 
     // Scoped by owner: a member can only lock a rate against their own request.
     const booking = await getRequest(request_id, viewer.id)
@@ -94,6 +103,8 @@ export async function POST(request: Request) {
         mint: token === 'USDC' ? env.usdcMint : null,
         status: 'open',
         expires_at: expiresAt,
+        terms_version: TERMS_VERSION,
+        terms_accepted_at: new Date().toISOString(),
       })
       .select('id, token, amount, amount_usd, sol_price_usd, recipient, mint, status, expires_at, created_at')
       .single()

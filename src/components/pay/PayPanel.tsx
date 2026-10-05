@@ -10,6 +10,7 @@ import { useSession } from '@/components/auth/SessionProvider'
 import { buildTransferTransaction, TransferSetupError } from '@/lib/solana/transfer'
 import { explorerTxUrl, publicEnv } from '@/lib/env'
 import { formatDateTime, shortAddress, sol, usd, usdc } from '@/lib/format'
+import { TERMS_LINKS, TERMS_VERSION } from '@/lib/terms'
 import type { PaymentIntent, PaymentToken, Quote } from '@/lib/types'
 
 type Phase =
@@ -44,6 +45,7 @@ export function PayPanel({ requestId, quote }: { requestId: string; quote: Quote
   const [error, setError] = useState<string | null>(null)
   const [settled, setSettled] = useState<Settled | null>(null)
   const [progress, setProgress] = useState<string | null>(null)
+  const [acceptedTerms, setAcceptedTerms] = useState(false)
 
   const quoteExpired = Date.parse(quote.expires_at) < Date.now()
 
@@ -57,7 +59,12 @@ export function PayPanel({ requestId, quote }: { requestId: string; quote: Quote
         const res = await fetch('/api/payments/intent', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ request_id: requestId, token: chosen }),
+          body: JSON.stringify({
+            request_id: requestId,
+            token: chosen,
+            accept_terms: true,
+            terms_version: TERMS_VERSION,
+          }),
         })
         const body = (await res.json()) as {
           intent?: PaymentIntent
@@ -366,12 +373,36 @@ export function PayPanel({ requestId, quote }: { requestId: string; quote: Quote
         </p>
       ) : null}
 
+      {phase === 'choose' || phase === 'locking' || phase === 'expired' ? (
+        <label className="mt-7 flex cursor-pointer gap-3 text-xs leading-relaxed text-muted">
+          <input
+            type="checkbox"
+            checked={acceptedTerms}
+            onChange={(event) => setAcceptedTerms(event.target.checked)}
+            className="mt-0.5 h-4 w-4 shrink-0 accent-[rgb(var(--accent))]"
+          />
+          <span>
+            I am 18 or over, and I accept the{' '}
+            {TERMS_LINKS.map((link, position) => (
+              <span key={link.href}>
+                <a href={link.href} target="_blank" rel="noreferrer" className="underline underline-offset-2 hover:text-ink">
+                  {link.label}
+                </a>
+                {position < TERMS_LINKS.length - 2 ? ', ' : position === TERMS_LINKS.length - 2 ? ' and ' : ''}
+              </span>
+            ))}
+            , and the supplier terms in the quote notes. I understand my payment is final once
+            confirmed on chain.
+          </span>
+        </label>
+      ) : null}
+
       <div className="mt-7">
         {phase === 'choose' || phase === 'locking' ? (
           <button
             type="button"
             onClick={() => void lockRate(token)}
-            disabled={phase === 'locking'}
+            disabled={phase === 'locking' || !acceptedTerms}
             className="btn btn-primary w-full"
           >
             {phase === 'locking' ? 'Locking the rate' : `Lock rate and pay in ${token}`}
@@ -385,7 +416,12 @@ export function PayPanel({ requestId, quote }: { requestId: string; quote: Quote
         ) : null}
 
         {phase === 'expired' ? (
-          <button type="button" onClick={() => void lockRate(token)} className="btn btn-ghost w-full">
+          <button
+            type="button"
+            onClick={() => void lockRate(token)}
+            disabled={!acceptedTerms}
+            className="btn btn-ghost w-full"
+          >
             Rate expired, get a fresh one
           </button>
         ) : null}
