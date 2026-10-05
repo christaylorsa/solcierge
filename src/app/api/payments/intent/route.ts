@@ -5,9 +5,13 @@ import { getRequest } from '@/lib/data'
 import { serverEnv } from '@/lib/env'
 import { getSolPrice } from '@/lib/price'
 import { supabaseAdmin } from '@/lib/supabase/admin'
+import { createLimiter } from '@/lib/ratelimit'
 import { TERMS_VERSION } from '@/lib/terms'
 
 export const dynamic = 'force-dynamic'
+
+// Per instance (SA-17). Each lock can cost two price-feed calls.
+const perMember = createLimiter({ limit: 20, windowMs: 60_000 })
 
 const WALLET_REQUIRED = 'Connect and sign in with the wallet you will pay from.'
 
@@ -31,6 +35,7 @@ export async function POST(request: Request) {
     const viewer = await requireViewer()
     // Paying needs a signed-in wallet: verification binds the transfer to it (SA-03).
     if (!viewer.wallet_address) return fail(WALLET_REQUIRED, 403)
+    if (!perMember.take(viewer.id)) return fail('Too many rate locks in a minute. Wait a moment and try again.', 429)
     const env = serverEnv()
 
     const parsed = schema.safeParse(await readJson<unknown>(request))

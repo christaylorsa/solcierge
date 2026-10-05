@@ -4,6 +4,7 @@ import { fail, handleError, ok, readJson } from '@/lib/api'
 import { requireViewer } from '@/lib/auth'
 import { getRequest } from '@/lib/data'
 import { decideSettlement, duplicateOutcome } from '@/lib/payments/settlement'
+import { createLimiter } from '@/lib/ratelimit'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { verifyTransfer } from '@/lib/solana/verify'
 import { fetchTransaction } from '@/lib/solana/connection'
@@ -18,6 +19,10 @@ const schema = z.object({
   intent_id: z.string().uuid(),
   signature: z.string().trim().min(64).max(120),
 })
+
+// Per instance (SA-17). Each call is an RPC getTransaction; the pay panel polls up
+// to 20 times per payment.
+const perMember = createLimiter({ limit: 60, windowMs: 60_000 })
 
 /** Grace after the lock expires during which a landed transfer is still auto-accepted. */
 const LATE_GRACE_SECONDS = 300
@@ -46,6 +51,7 @@ export async function POST(request: Request) {
     // transfer to the treasury would settle the booking (SA-03).
     const payer = viewer.wallet_address
     if (!payer) return fail('Connect and sign in with the wallet you paid from.', 403)
+    if (!perMember.take(viewer.id)) return fail('Too many checks in a minute. Wait a moment and try again.', 429)
 
     const parsed = schema.safeParse(await readJson<unknown>(request))
     if (!parsed.success) return fail('A payment intent and a transaction signature are required.', 422)

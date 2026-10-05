@@ -3,8 +3,12 @@ import { publicEnv } from '@/lib/env'
 import { issueNonce } from '@/lib/session'
 import { signInMessage, siwsChainId } from '@/lib/siws'
 import { isSolanaAddress } from '@/lib/validate'
+import { clientIp, createLimiter } from '@/lib/ratelimit'
 
 export const dynamic = 'force-dynamic'
+
+// Per instance (SA-17). A member needs one challenge per sign-in.
+const perIp = createLimiter({ limit: 20, windowMs: 60_000 })
 
 /**
  * Step one of wallet sign-in. Returns a challenge nonce, held in a signed httpOnly
@@ -14,6 +18,8 @@ export const dynamic = 'force-dynamic'
  */
 export async function GET(request: Request) {
   try {
+    if (!perIp.take(clientIp(request))) return fail('Too many attempts. Wait a minute and try again.', 429)
+
     const url = new URL(request.url)
     const wallet = url.searchParams.get('wallet')
     if (!isSolanaAddress(wallet)) return fail('A valid wallet address is required.', 400)

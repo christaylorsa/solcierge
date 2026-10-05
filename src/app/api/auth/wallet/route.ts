@@ -6,8 +6,12 @@ import { fail, handleError, ok, readJson } from '@/lib/api'
 import { upsertUserByWallet } from '@/lib/auth'
 import { consumeNonce, issueWalletSession } from '@/lib/session'
 import { signInMessage } from '@/lib/siws'
+import { clientIp, createLimiter } from '@/lib/ratelimit'
 
 export const dynamic = 'force-dynamic'
+
+// Per instance (SA-17). Each success can create a users row, so keep it bounded.
+const perIp = createLimiter({ limit: 20, windowMs: 60_000 })
 
 const schema = z.object({
   wallet: z.string().max(64),
@@ -22,6 +26,8 @@ const schema = z.object({
  */
 export async function POST(request: Request) {
   try {
+    if (!perIp.take(clientIp(request))) return fail('Too many attempts. Wait a minute and try again.', 429)
+
     const parsed = schema.safeParse(await readJson<unknown>(request))
     if (!parsed.success) return fail('Wallet, signature and nonce are all required.')
     const body = parsed.data
