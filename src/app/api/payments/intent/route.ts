@@ -9,6 +9,8 @@ import { TERMS_VERSION } from '@/lib/terms'
 
 export const dynamic = 'force-dynamic'
 
+const WALLET_REQUIRED = 'Connect and sign in with the wallet you will pay from.'
+
 const schema = z.object({
   request_id: z.string().uuid(),
   token: z.enum(['SOL', 'USDC']),
@@ -27,6 +29,8 @@ const schema = z.object({
 export async function POST(request: Request) {
   try {
     const viewer = await requireViewer()
+    // Paying needs a signed-in wallet: verification binds the transfer to it (SA-03).
+    if (!viewer.wallet_address) return fail(WALLET_REQUIRED, 403)
     const env = serverEnv()
 
     const parsed = schema.safeParse(await readJson<unknown>(request))

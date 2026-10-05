@@ -21,8 +21,11 @@ export type VerifyRequest = {
   expectedAmount: number
   /** Required for USDC. The transfer must move this exact mint. */
   mint?: string | null
-  /** When set, the fee payer must be this address. */
-  expectedPayer?: string | null
+  /**
+   * The signed-in member's wallet. Required: the fee payer must be this address, which
+   * is what stops one member settling their booking with another member's transfer.
+   */
+  expectedPayer: string
   /** Unix seconds. Rejects a transaction that landed before the intent existed. */
   notBefore?: number
 }
@@ -81,6 +84,12 @@ export async function verifyTransfer(input: VerifyRequest, deps: VerifyDeps): Pr
     }
   }
 
+  // Without a payer to bind to, any transfer to the treasury would do, including
+  // someone else's. Refuse before spending an RPC call.
+  if (!input.expectedPayer) {
+    return { status: 'mismatch', reason: 'Sign in with the wallet you are paying from.' }
+  }
+
   const tx = await deps.getTransaction(input.signature)
 
   if (!tx) {
@@ -102,7 +111,7 @@ export async function verifyTransfer(input: VerifyRequest, deps: VerifyDeps): Pr
   if (!feePayer) {
     return { status: 'mismatch', reason: 'Could not read the fee payer from the transaction.' }
   }
-  if (input.expectedPayer && feePayer !== input.expectedPayer) {
+  if (feePayer !== input.expectedPayer) {
     return {
       status: 'mismatch',
       reason: 'That transaction was signed by a different wallet than the one on this account.',

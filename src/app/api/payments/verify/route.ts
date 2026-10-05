@@ -40,6 +40,10 @@ export type VerifyOutcome =
 export async function POST(request: Request) {
   try {
     const viewer = await requireViewer()
+    // The payer check below binds the transfer to this wallet. Without one, any
+    // transfer to the treasury would settle the booking (SA-03).
+    const payer = viewer.wallet_address
+    if (!payer) return fail('Connect and sign in with the wallet you paid from.', 403)
 
     const parsed = schema.safeParse(await readJson<unknown>(request))
     if (!parsed.success) return fail('A payment intent and a transaction signature are required.', 422)
@@ -107,7 +111,7 @@ export async function POST(request: Request) {
         token: intent.token,
         expectedAmount: Number(intent.amount),
         mint: intent.mint,
-        expectedPayer: viewer.wallet_address,
+        expectedPayer: payer,
         // The transfer cannot predate the lock by more than a minute of clock skew.
         notBefore: Math.floor(Date.parse(intent.created_at) / 1000) - 60,
       },

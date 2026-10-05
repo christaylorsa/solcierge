@@ -92,6 +92,7 @@ const SOL_BASE = {
   recipient: TREASURY,
   token: 'SOL' as const,
   expectedAmount: 2.5,
+  expectedPayer: PAYER,
 }
 
 const USDC_BASE = {
@@ -100,6 +101,7 @@ const USDC_BASE = {
   token: 'USDC' as const,
   expectedAmount: 118_000,
   mint: USDC,
+  expectedPayer: PAYER,
 }
 
 // --- base unit maths -------------------------------------------------------
@@ -174,9 +176,9 @@ test('refuses a transfer the treasury does not appear in', async () => {
 
 test('refuses a transfer where the treasury balance fell', async () => {
   const tx = txFixture({
-    accounts: [TREASURY, PAYER],
-    preBalances: [5_000_000_000, 0],
-    postBalances: [4_000_000_000, 1_000_000_000],
+    accounts: [PAYER, TREASURY],
+    preBalances: [0, 5_000_000_000],
+    postBalances: [1_000_000_000, 4_000_000_000],
   })
 
   const result = await verifyTransfer(SOL_BASE, deps(tx))
@@ -328,4 +330,27 @@ test('refuses a USDC payment with no mint configured', async () => {
   const result = await verifyTransfer({ ...USDC_BASE, mint: null }, deps(tx))
   assert.equal(result.status, 'mismatch')
   assert.match((result as { reason: string }).reason, /No mint configured/)
+})
+
+test('SA-03: refuses any transfer when there is no signed-in wallet to bind the payer to', async () => {
+  // A member signed in by email only. Without a payer, a stranger's transfer to the
+  // treasury would settle their booking.
+  let called = false
+  const tx = txFixture({
+    accounts: [OTHER, TREASURY],
+    preBalances: [10_000_000_000, 0],
+    postBalances: [7_500_000_000, 2_500_000_000],
+  })
+  const result = await verifyTransfer(
+    { ...SOL_BASE, expectedPayer: '' },
+    {
+      getTransaction: async () => {
+        called = true
+        return tx
+      },
+    },
+  )
+
+  assert.equal(result.status, 'mismatch')
+  assert.equal(called, false)
 })
