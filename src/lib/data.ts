@@ -1,42 +1,47 @@
 import { supabaseAdmin } from '@/lib/supabase/admin'
-import type { BookingRequestFull, RequestStatus } from '@/lib/types'
+import type { BookingDocument, BookingRequestFull, RequestStatus } from '@/lib/types'
 import { isUuid } from '@/lib/validate'
 
 // Typed as plain `string`, not a literal: supabase-js tries to parse a literal select
 // at the type level, and it cannot follow two embedded resources plus a join. We shape
 // the rows ourselves in shape() below, so the inference buys nothing here anyway.
 const REQUEST_COLUMNS: string = `
-  id, user_id, category, details, budget_min, budget_max, status, created_at, updated_at,
+  id, user_id, category, details, budget_min, budget_max, status, confirmation_ref, itinerary,
+  created_at, updated_at,
   quotes ( id, request_id, amount_usd, amount_sol, amount_usdc, expires_at, notes, created_at ),
-  payments ( id, request_id, intent_id, tx_signature, token, amount, payer, slot, confirmed_at )
+  payments ( id, request_id, intent_id, tx_signature, token, amount, payer, slot, confirmed_at ),
+  booking_documents ( id, request_id, title, file_name, content_type, size_bytes, created_at )
 `
 
 const REQUEST_COLUMNS_WITH_USER: string = `
-  id, user_id, category, details, budget_min, budget_max, status, created_at, updated_at,
-  quotes ( id, request_id, amount_usd, amount_sol, amount_usdc, expires_at, notes, created_at ),
-  payments ( id, request_id, intent_id, tx_signature, token, amount, payer, slot, confirmed_at ),
-  users ( id, wallet_address, email, name )
+  ${REQUEST_COLUMNS},
+  users ( id, wallet_address, email, name, telegram_chat_id )
 `
 
 type RawRow = Record<string, unknown> & {
   quotes?: unknown[]
   payments?: unknown[]
+  booking_documents?: unknown[]
   users?: unknown
 }
 
-/** Collapses the embedded arrays down to the newest quote and the single payment. */
+/** Collapses the embedded arrays down to the newest quote, the single payment and the documents in upload order. */
 function shape(row: RawRow): BookingRequestFull {
   const quotes = (row.quotes ?? []) as BookingRequestFull['quote'][]
   const payments = (row.payments ?? []) as BookingRequestFull['payment'][]
+  const documents = ((row.booking_documents ?? []) as BookingDocument[])
+    .filter(Boolean)
+    .sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at))
 
   const newestQuote =
     quotes.filter(Boolean).sort((a, b) => Date.parse(b!.created_at) - Date.parse(a!.created_at))[0] ?? null
 
-  const { quotes: _q, payments: _p, users, ...rest } = row
+  const { quotes: _q, payments: _p, booking_documents: _d, users, ...rest } = row
   return {
     ...(rest as unknown as BookingRequestFull),
     quote: newestQuote,
     payment: payments.filter(Boolean)[0] ?? null,
+    documents,
     user: (users ?? null) as BookingRequestFull['user'],
   }
 }
@@ -103,4 +108,15 @@ export async function countByStatus(): Promise<Record<RequestStatus, number>> {
     if (status in counts) counts[status] += 1
   }
   return counts
+}
+
+/** Whether a member has a Telegram chat linked for booking updates. */
+export async function hasTelegramLinked(userId: string): Promise<boolean> {
+  const { data, error } = await supabaseAdmin()
+    .from('users')
+    .select('telegram_chat_id')
+    .eq('id', userId)
+    .maybeSingle()
+  if (error) throw new Error(error.message)
+  return Boolean(data?.telegram_chat_id)
 }

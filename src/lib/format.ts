@@ -104,6 +104,6 @@ export const STATUS_COPY: Record<RequestStatus, { label: string; hint: string }>
   pending: { label: 'With the desk', hint: 'A concierge is sourcing options and will quote you shortly.' },
   quoted: { label: 'Quote ready', hint: 'Review the quote and settle in SOL or USDC to confirm.' },
   paid: { label: 'Paid', hint: 'Funds received on chain. We are locking in the booking now.' },
-  fulfilled: { label: 'Fulfilled', hint: 'Delivered. Your confirmation and the supplier details are on this page.' },
+  fulfilled: { label: 'Confirmed', hint: 'Booked and confirmed. Your reference, itinerary and documents are on this page.' },
   cancelled: { label: 'Cancelled', hint: 'This request is closed. If you had paid, any refund due follows our Cancellation and Refunds policy.' },
 }

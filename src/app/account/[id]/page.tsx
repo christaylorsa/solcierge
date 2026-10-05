@@ -2,12 +2,14 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { PayPanel } from '@/components/pay/PayPanel'
+import { Paperwork, hasPaperwork } from '@/components/account/Paperwork'
+import { TelegramConnect } from '@/components/account/TelegramConnect'
 import { RequestDetails } from '@/components/account/RequestDetails'
 import { StatusPill } from '@/components/account/StatusPill'
 import { SignedOutPanel } from '@/components/account/SignedOutPanel'
 import { Section, SectionHead } from '@/components/site/Section'
 import { getViewer } from '@/lib/auth'
-import { getRequest } from '@/lib/data'
+import { getRequest, hasTelegramLinked } from '@/lib/data'
 import { categoryName } from '@/lib/categories'
 import { explorerTxUrl } from '@/lib/env'
 import { STATUS_COPY, formatDateTime, relativeTime, shortAddress, sol, usd, usdc } from '@/lib/format'
@@ -35,7 +37,7 @@ export default async function RequestPage({
     )
   }
 
-  const request = await getRequest(id, viewer.id)
+  const [request, telegramLinked] = await Promise.all([getRequest(id, viewer.id), hasTelegramLinked(viewer.id)])
   if (!request) notFound()
 
   const quote = request.quote
@@ -75,6 +77,8 @@ export default async function RequestPage({
 
       <div className="mt-14 grid gap-12 lg:grid-cols-[1.4fr_1fr] lg:gap-16">
         <div className="space-y-12">
+          {hasPaperwork(request) ? <Paperwork request={request} /> : null}
+
           <div className="border border-line bg-surface p-6 sm:p-7">
             <h2 className="eyebrow">Your request</h2>
             <div className="mt-6">
@@ -154,7 +158,7 @@ export default async function RequestPage({
           ) : null}
         </div>
 
-        <div className="lg:sticky lg:top-[96px] lg:self-start">
+        <div className="space-y-6 lg:sticky lg:top-[96px] lg:self-start">
           {payable && quote ? (
             <PayPanel requestId={request.id} quote={quote} />
           ) : (
@@ -171,6 +175,8 @@ export default async function RequestPage({
               ) : null}
             </div>
           )}
+
+          {request.status !== 'cancelled' ? <TelegramConnect connected={telegramLinked} /> : null}
         </div>
       </div>
     </Section>
@@ -191,9 +197,9 @@ function waitingCopy(status: string): string {
     case 'pending':
       return 'A concierge has your brief and is working it against operators we hold accounts with. You will get one figure with the reasoning behind it, not a list of links.'
     case 'paid':
-      return 'Funds received and verified on chain. We are confirming with the supplier now and will send the paperwork as soon as it is signed.'
+      return 'Funds received and verified on chain. We are confirming with the supplier now. Your booking reference, itinerary and documents will appear on this page as soon as it is signed.'
     case 'fulfilled':
-      return 'Delivered. Your confirmation and the supplier details are on this page. If anything needs changing, contact the desk and it reaches the same concierge.'
+      return 'Booked and confirmed. Your reference, itinerary and documents are on this page. If anything needs changing, contact the desk and it reaches the same concierge.'
     case 'cancelled':
       return 'This request is closed and nothing was charged. If circumstances changed, send a fresh request and we will re-source it.'
     default:

@@ -5,7 +5,8 @@ import { StatusPill } from '@/components/account/StatusPill'
 import { SignedOutPanel } from '@/components/account/SignedOutPanel'
 import { Section, SectionHead } from '@/components/site/Section'
 import { getViewer } from '@/lib/auth'
-import { listRequestsForUser } from '@/lib/data'
+import { hasTelegramLinked, listRequestsForUser } from '@/lib/data'
+import { TelegramConnect } from '@/components/account/TelegramConnect'
 import { categoryName } from '@/lib/categories'
 import { budgetRange, dateWindow, formatDate, relativeTime, shortAddress, usd } from '@/lib/format'
 import type { BookingRequestFull } from '@/lib/types'
@@ -32,9 +33,10 @@ export default async function AccountPage() {
   }
 
   let requests: BookingRequestFull[] = []
+  let telegramLinked = false
   let loadError: string | null = null
   try {
-    requests = await listRequestsForUser(viewer.id)
+    ;[requests, telegramLinked] = await Promise.all([listRequestsForUser(viewer.id), hasTelegramLinked(viewer.id)])
   } catch (error) {
     loadError = error instanceof Error ? error.message : 'Could not load your bookings.'
   }
@@ -74,6 +76,12 @@ export default async function AccountPage() {
         <div className="mt-14 space-y-16">
           {open.length > 0 ? <Group title="Live" requests={open} /> : null}
           {settled.length > 0 ? <Group title="History" requests={settled} /> : null}
+        </div>
+      )}
+
+      {loadError ? null : (
+        <div id="updates" className="mt-16 max-w-md">
+          <TelegramConnect connected={telegramLinked} />
         </div>
       )}
     </Section>
@@ -125,7 +133,11 @@ function Group({ title, requests }: { title: string; requests: BookingRequestFul
               </dl>
 
               <span className="text-[0.6875rem] tracking-label uppercase text-faint transition-colors duration-500 ease group-hover:text-accent">
-                {request.status === 'quoted' ? 'Review and pay' : 'Open'}
+                {request.status === 'quoted'
+                  ? 'Review and pay'
+                  : request.documents.length > 0 || request.confirmation_ref
+                    ? 'View paperwork'
+                    : 'Open'}
               </span>
             </Link>
           </Reveal>

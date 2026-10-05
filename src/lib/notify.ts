@@ -1,14 +1,16 @@
 /**
- * Operator alerts: Telegram and email, fired when something needs the desk.
+ * Alerts. Operator alerts (Telegram and email to the desk) when something needs the
+ * desk, and member updates (to the member's linked Telegram chat and email) when
+ * their booking moves.
  *
  * Every send is best-effort. A channel with no credentials is skipped, a failed
  * send is logged and swallowed, and callers run these inside `after()` so an alert
- * never slows down or fails the member's own request.
+ * never slows down or fails the request that triggered it.
  */
 
 import { categoryName } from '@/lib/categories'
 import { explorerTxUrl, publicEnv, serverEnv } from '@/lib/env'
-import { budgetRange, dateWindow, formatDate } from '@/lib/format'
+import { budgetRange, dateWindow, formatDate, formatDateTime, usd } from '@/lib/format'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import type { RequestDetails } from '@/lib/types'
 
@@ -25,41 +27,51 @@ function escapeHtml(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
 
-async function sendTelegram(alert: Alert) {
-  const { telegramBotToken, telegramChatIds } = serverEnv()
-  if (!telegramBotToken || telegramChatIds.length === 0) return
+/** Calls a Bot API method. Throws on a transport or API error. */
+export async function telegramApi<T = unknown>(method: string, body: Record<string, unknown>): Promise<T> {
+  const { telegramBotToken } = serverEnv()
+  if (!telegramBotToken) throw new Error('Misconfigured: TELEGRAM_BOT_TOKEN is not set')
+  const res = await fetch(`https://api.telegram.org/bot${telegramBotToken}/${method}`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(8000),
+  })
+  const json = (await res.json().catch(() => null)) as { ok?: boolean; result?: T; description?: string } | null
+  if (!res.ok || !json?.ok) throw new Error(`Telegram ${method} failed (${res.status}): ${json?.description ?? 'no body'}`)
+  return json.result as T
+}
 
-  const text = [
+function telegramText(alert: Alert): string {
+  return [
     `<b>${escapeHtml(alert.title)}</b>`,
     '',
     ...alert.lines.map(escapeHtml),
     '',
     `<a href="${alert.link.href}">${escapeHtml(alert.link.label)}</a>`,
   ].join('\n')
+}
 
+async function sendTelegram(alert: Alert, chatIds: (string | number)[]) {
+  if (!serverEnv().telegramBotToken || chatIds.length === 0) return
+  const text = telegramText(alert)
   await Promise.all(
-    telegramChatIds.map(async (chatId) => {
-      const res = await fetch(`https://api.telegram.org/bot${telegramBotToken}/sendMessage`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML', disable_web_page_preview: true }),
-        signal: AbortSignal.timeout(8000),
-      })
-      if (!res.ok) throw new Error(`Telegram responded ${res.status}: ${await res.text()}`)
-    }),
+    chatIds.map((chatId) =>
+      telegramApi('sendMessage', { chat_id: chatId, text, parse_mode: 'HTML', disable_web_page_preview: true }),
+    ),
   )
 }
 
-async function sendEmail(alert: Alert) {
-  const { resendApiKey, alertEmails, alertFrom } = serverEnv()
-  if (!resendApiKey || alertEmails.length === 0) return
+async function sendEmail(alert: Alert, to: string[]) {
+  const { resendApiKey, alertFrom } = serverEnv()
+  if (!resendApiKey || to.length === 0) return
 
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: `Bearer ${resendApiKey}` },
     body: JSON.stringify({
       from: alertFrom,
-      to: alertEmails,
+      to,
       subject: alert.title,
       text: [...alert.lines, '', `${alert.link.label}: ${alert.link.href}`].join('\n'),
     }),
@@ -68,8 +80,10 @@ async function sendEmail(alert: Alert) {
   if (!res.ok) throw new Error(`Resend responded ${res.status}: ${await res.text()}`)
 }
 
+/** To the desk. */
 async function send(alert: Alert) {
-  const results = await Promise.allSettled([sendTelegram(alert), sendEmail(alert)])
+  const { telegramChatIds, alertEmails } = serverEnv()
+  const results = await Promise.allSettled([sendTelegram(alert, telegramChatIds), sendEmail(alert, alertEmails)])
   for (const result of results) {
     if (result.status === 'rejected') console.error('[solcierge] alert failed:', result.reason)
   }
@@ -151,4 +165,79 @@ export async function notifyPayment(input: {
     ],
     link: { label: 'Open the desk', href: `${publicEnv.siteUrl}/admin${input.review ? '' : '?status=paid'}` },
   })
+}
+
+// --- member updates -----------------------------------------------------------
+
+/** Which channels a member update actually went out on. */
+export type Delivery = { telegram: boolean; email: boolean }
+
+/** A one-line label for a booking, built from whatever the member gave us. */
+function bookingHeadline(category: string, d: RequestDetails): string {
+  if (d.origin && d.destination) return `${categoryName(category)}: ${d.origin} to ${d.destination}`
+  if (d.location) return `${categoryName(category)}: ${d.location}`
+  return categoryName(category)
+}
+
+/**
+ * Sends a member an update about one of their bookings. Telegram goes to the chat
+ * they linked. Email goes to their verified sign-in address, or failing that the
+ * address they typed on the brief, which is unverified: so messages carry only a
+ * headline and a link, and the paperwork itself stays behind sign-in.
+ */
+async function sendToMember(requestId: string, build: (headline: string) => Omit<Alert, 'link'> & { linkLabel: string }): Promise<Delivery> {
+  const { data, error } = await supabaseAdmin()
+    .from('booking_requests')
+    .select('category, details, users ( email, telegram_chat_id )')
+    .eq('id', requestId)
+    .maybeSingle()
+  if (error) throw new Error(error.message)
+  if (!data) return { telegram: false, email: false }
+
+  const details = (data.details ?? {}) as RequestDetails
+  const user = (Array.isArray(data.users) ? data.users[0] : data.users) as
+    | { email: string | null; telegram_chat_id: number | null }
+    | null
+  const chatId = user?.telegram_chat_id ?? null
+  const email = user?.email ?? details.contact_email ?? null
+
+  const { linkLabel, ...rest } = build(bookingHeadline(data.category, details))
+  const alert: Alert = { ...rest, link: { label: linkLabel, href: `${publicEnv.siteUrl}/account/${requestId}` } }
+
+  const wantsEmail = Boolean(email && serverEnv().resendApiKey)
+  const [telegram, mail] = await Promise.allSettled([
+    chatId ? sendTelegram(alert, [chatId]) : Promise.resolve(),
+    wantsEmail ? sendEmail(alert, [email!]) : Promise.resolve(),
+  ])
+  if (telegram.status === 'rejected') console.error('[solcierge] member telegram failed:', telegram.reason)
+  if (mail.status === 'rejected') console.error('[solcierge] member email failed:', mail.reason)
+
+  return {
+    telegram: Boolean(chatId) && telegram.status === 'fulfilled',
+    email: wantsEmail && mail.status === 'fulfilled',
+  }
+}
+
+export function notifyMemberQuote(input: { requestId: string; amountUsd: number; expiresAt: string }) {
+  return sendToMember(input.requestId, (headline) => ({
+    title: 'Your Solcierge quote is ready',
+    lines: [headline, `${usd(input.amountUsd)}, held until ${formatDateTime(input.expiresAt)} UTC.`],
+    linkLabel: 'Review and pay',
+  }))
+}
+
+export function notifyMemberConfirmed(requestId: string) {
+  return sendToMember(requestId, (headline) => ({
+    title: 'Your booking is confirmed',
+    lines: [headline, 'Your confirmation, itinerary and documents are on your booking page.'],
+    linkLabel: 'Open your booking',
+  }))
+}
+
+export function notifyMemberPaperwork(requestId: string) {
+  return sendToMember(requestId, (headline) => ({
+    title: 'New paperwork for your booking',
+    lines: [headline, 'The desk has added documents or updated your itinerary.'],
+    linkLabel: 'Open your booking',
+  }))
 }

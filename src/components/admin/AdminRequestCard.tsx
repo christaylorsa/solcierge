@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { PaperworkEditor } from './PaperworkEditor'
 import { QuoteEditor } from './QuoteEditor'
 import { RequestDetails } from '@/components/account/RequestDetails'
 import { StatusPill } from '@/components/account/StatusPill'
@@ -18,7 +19,7 @@ const NEXT: Record<RequestStatus, { status: RequestStatus; label: string }[]> = 
     { status: 'cancelled', label: 'Cancel' },
   ],
   paid: [
-    { status: 'fulfilled', label: 'Mark fulfilled' },
+    { status: 'fulfilled', label: 'Confirm booking' },
     { status: 'cancelled', label: 'Cancel and refund' },
   ],
   fulfilled: [],
@@ -27,14 +28,30 @@ const NEXT: Record<RequestStatus, { status: RequestStatus; label: string }[]> = 
 
 export function AdminRequestCard({ request }: { request: BookingRequestFull }) {
   const router = useRouter()
-  const [open, setOpen] = useState(request.status === 'pending')
+  const [open, setOpen] = useState(request.status === 'pending' || request.status === 'paid')
   const [busy, setBusy] = useState<RequestStatus | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const quote = request.quote
   const quoteLive = quote ? Date.parse(quote.expires_at) > Date.now() : false
 
+  const hasPaperwork = Boolean(request.confirmation_ref || request.itinerary || request.documents.length > 0)
+  const memberReach = {
+    telegram: Boolean(request.user?.telegram_chat_id),
+    email: Boolean(request.user?.email || request.details?.contact_email),
+  }
+
   async function move(status: RequestStatus) {
+    if (
+      status === 'fulfilled' &&
+      !window.confirm(
+        hasPaperwork
+          ? 'Confirm this booking? The client is told it is confirmed and that their paperwork is ready.'
+          : 'No paperwork has been added yet. Confirm anyway? The client is told their paperwork is ready.',
+      )
+    ) {
+      return
+    }
     setBusy(status)
     setError(null)
     try {
@@ -73,6 +90,7 @@ export function AdminRequestCard({ request }: { request: BookingRequestFull }) {
             )}
             {' · '}
             {relativeTime(request.created_at)}
+            {memberReach.telegram ? ' · Telegram linked' : ''}
           </p>
         </div>
 
@@ -131,6 +149,24 @@ export function AdminRequestCard({ request }: { request: BookingRequestFull }) {
                   </a>
                 </div>
               ) : null}
+
+              {request.status !== 'cancelled' ? (
+                <div className="mt-8 border-t border-line pt-6">
+                  <h3 className="eyebrow">Paperwork for the client</h3>
+                  <p className="mt-2 text-xs leading-relaxed text-faint">
+                    Shown on the client&apos;s booking page as soon as you save or upload.
+                  </p>
+                  <div className="mt-5">
+                    <PaperworkEditor
+                      requestId={request.id}
+                      confirmationRef={request.confirmation_ref}
+                      itinerary={request.itinerary}
+                      documents={request.documents}
+                      memberReach={memberReach}
+                    />
+                  </div>
+                </div>
+              ) : null}
             </div>
 
             <div>
@@ -173,7 +209,7 @@ export function AdminRequestCard({ request }: { request: BookingRequestFull }) {
                   </div>
                   <p className="mt-4 text-xs leading-relaxed text-faint">
                     Paid is never set here. Only a verified on-chain transfer moves a request to
-                    paid.
+                    paid. Confirming a booking messages the client.
                   </p>
                 </div>
               ) : null}

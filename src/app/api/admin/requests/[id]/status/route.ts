@@ -1,6 +1,8 @@
+import { after } from 'next/server'
 import { z } from 'zod'
 import { fail, handleError, ok, readJson } from '@/lib/api'
 import { requireAdmin } from '@/lib/auth'
+import { notifyMemberConfirmed } from '@/lib/notify'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { REQUEST_STATUSES, type RequestStatus } from '@/lib/types'
 import { isUuid } from '@/lib/validate'
@@ -55,6 +57,11 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       .single()
 
     if (updated.error) throw new Error(updated.error.message)
+
+    if (next === 'fulfilled') {
+      // The member hears the booking is confirmed and where the paperwork is.
+      after(() => notifyMemberConfirmed(id).catch((cause) => console.error('[solcierge] member alert failed:', cause)))
+    }
 
     if (next === 'cancelled') {
       await db.from('payment_intents').update({ status: 'expired' }).eq('request_id', id).eq('status', 'open')

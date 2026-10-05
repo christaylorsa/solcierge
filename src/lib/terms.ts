@@ -5,7 +5,7 @@
  * the intent route refuses acceptances of an older version, which forces a
  * reload onto the current text.
  */
-export const TERMS_VERSION = '2026-10-05'
+export const TERMS_VERSION = '2026-10-05.2'
 
 export const TERMS_LINKS = [
   { href: '/legal/concierge-terms', label: 'Concierge terms' },

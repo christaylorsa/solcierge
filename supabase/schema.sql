@@ -143,6 +143,74 @@ create table if not exists public.payments (
 
 create index if not exists payments_request_idx on public.payments (request_id);
 
+-- --- paperwork on a booking ---------------------------------------------------
+-- What the desk hands the member once a booking is confirmed: the supplier's
+-- reference, the itinerary and instructions, and the documents themselves.
+
+alter table public.booking_requests add column if not exists confirmation_ref text;
+alter table public.booking_requests add column if not exists itinerary text;
+
+create table if not exists public.booking_documents (
+  id           uuid primary key default gen_random_uuid(),
+  request_id   uuid not null references public.booking_requests (id) on delete restrict,
+  title        text not null,
+  file_name    text not null,
+  storage_path text not null unique,
+  content_type text not null,
+  size_bytes   bigint not null,
+  created_at   timestamptz not null default now()
+);
+
+create index if not exists booking_documents_request_idx
+  on public.booking_documents (request_id, created_at);
+
+alter table public.booking_documents enable row level security;
+revoke all on public.booking_documents from anon, authenticated;
+grant all on public.booking_documents to service_role;
+
+-- The files. Private: no storage policies exist, so only the service role can read
+-- or write. Members download through /api/documents/<id>, which checks ownership
+-- and hands out a 60-second signed link.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'booking-documents',
+  'booking-documents',
+  false,
+  26214400, -- 25 MB
+  array[
+    'application/pdf',
+    'image/png',
+    'image/jpeg',
+    'image/webp',
+    'image/heic',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'text/plain',
+    'text/calendar',
+    'application/vnd.apple.pkpass'
+  ]
+)
+on conflict (id) do update
+  set public = false,
+      file_size_limit = excluded.file_size_limit,
+      allowed_mime_types = excluded.allowed_mime_types;
+
+-- --- member Telegram ----------------------------------------------------------
+-- A member links a Telegram chat by opening t.me/<bot>?start=<code>. The code is
+-- single-use and short-lived; the webhook swaps it for the chat id.
+
+alter table public.users add column if not exists telegram_chat_id bigint;
+alter table public.users add column if not exists telegram_linked_at timestamptz;
+alter table public.users add column if not exists telegram_link_code text;
+alter table public.users add column if not exists telegram_link_expires_at timestamptz;
+
+create unique index if not exists users_telegram_link_code_key
+  on public.users (telegram_link_code) where telegram_link_code is not null;
+create index if not exists users_telegram_chat_idx
+  on public.users (telegram_chat_id) where telegram_chat_id is not null;
+
 -- --- updated_at ------------------------------------------------------------
 
 create or replace function public.touch_updated_at()
@@ -171,14 +239,14 @@ alter table public.payment_intents  enable row level security;
 alter table public.payments         enable row level security;
 
 revoke all on public.users, public.booking_requests, public.quotes,
-              public.payment_intents, public.payments
+              public.payment_intents, public.payments, public.booking_documents
   from anon, authenticated;
 
 -- Newer Supabase projects can be created without default table grants, so the
 -- service role gets its access explicitly rather than by project setting.
 grant usage on schema public to service_role;
 grant all on public.users, public.booking_requests, public.quotes,
-             public.payment_intents, public.payments
+             public.payment_intents, public.payments, public.booking_documents
   to service_role;
 
 -- --- retention and erasure -------------------------------------------------
@@ -188,9 +256,10 @@ grant all on public.users, public.booking_requests, public.quotes,
 --
 --   select public.anonymize_user('<user id>');
 --
--- That clears the member's name, email and wallet and strips the free-text
--- brief and typed contact details from their requests, while bookings, quotes
--- and payments remain.
+-- That clears the member's name, email, wallet and Telegram link and strips the
+-- free-text brief and typed contact details from their requests, while bookings,
+-- quotes and payments remain. Uploaded documents are not touched: Postgres cannot
+-- delete Storage files, so remove the booking's folder in the Storage dashboard.
 
 alter table public.users add column if not exists anonymized_at timestamptz;
 alter table public.users drop constraint if exists users_identity_present;
@@ -210,7 +279,10 @@ create or replace function public.anonymize_user(target uuid)
 returns void language plpgsql as $$
 begin
   update public.users
-     set name = null, email = null, wallet_address = null, anonymized_at = now()
+     set name = null, email = null, wallet_address = null,
+         telegram_chat_id = null, telegram_linked_at = null,
+         telegram_link_code = null, telegram_link_expires_at = null,
+         anonymized_at = now()
    where id = target;
 
   -- The free-text brief, plus the contact name and email a member typed into it

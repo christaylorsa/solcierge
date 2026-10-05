@@ -1,6 +1,8 @@
+import { after } from 'next/server'
 import { z } from 'zod'
 import { fail, handleError, ok, readJson } from '@/lib/api'
 import { requireAdmin } from '@/lib/auth'
+import { notifyMemberQuote } from '@/lib/notify'
 import { getSolPrice } from '@/lib/price'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 
@@ -79,6 +81,12 @@ export async function POST(request: Request) {
       .update({ status: 'expired' })
       .eq('request_id', request_id)
       .eq('status', 'open')
+
+    after(() =>
+      notifyMemberQuote({ requestId: request_id, amountUsd: amount_usd, expiresAt }).catch((cause) =>
+        console.error('[solcierge] member alert failed:', cause),
+      ),
+    )
 
     return ok({ quote: inserted.data }, { status: 201 })
   } catch (error) {
