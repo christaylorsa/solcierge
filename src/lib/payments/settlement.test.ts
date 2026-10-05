@@ -44,3 +44,7 @@ test('a transfer landing after the lock and its grace goes to review', () => {
   assert.equal(decideSettlement({ ...LIVE, blockTime: 1_800_000_600 + 300 }).kind, 'paid')
   assert.equal(decideSettlement({ ...LIVE, blockTime: 1_800_000_600 + 301 }).kind, 'review')
 })
+
+test('SA-11: a transfer with no reported block time goes to review', () => {
+  assert.equal(decideSettlement({ ...LIVE, blockTime: null }).kind, 'review')
+})

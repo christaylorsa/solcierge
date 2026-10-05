@@ -41,8 +41,11 @@ function assertCluster(): Promise<void> {
  */
 export async function fetchTransaction(signature: string): Promise<VersionedTransactionResponse | null> {
   await assertCluster()
+  // Finalized, not confirmed: a booking marked paid is acted on irreversibly, so it
+  // waits the ~13 s for a rooted block (SA-11). Until then this returns null and the
+  // pay panel keeps polling.
   return rpc().getTransaction(signature, {
-    commitment: 'confirmed',
+    commitment: 'finalized',
     maxSupportedTransactionVersion: 0,
   })
 }

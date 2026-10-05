@@ -26,7 +26,8 @@ type Phase =
 
 type Settled = { outcome: string; message: string; signature: string }
 
-const VERIFY_ATTEMPTS = 12
+// Verification waits for finalization (~13 s after confirmed), so allow ~50 s.
+const VERIFY_ATTEMPTS = 20
 const VERIFY_DELAY_MS = 2500
 const CONFIRM_ATTEMPTS = 20
 const CONFIRM_DELAY_MS = 1000

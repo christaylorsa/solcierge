@@ -42,7 +42,11 @@ export function decideSettlement(input: SettlementInput): Settlement {
   if (input.intentStatus === 'expired') {
     return { kind: 'review', reason: 'It paid a rate lock that had been replaced or withdrawn.' }
   }
-  if (input.blockTime !== null && input.blockTime > input.lockExpiresAt + input.graceSeconds) {
+  // Without a block time neither "after the quote" nor "inside the lock" can be shown.
+  if (input.blockTime === null) {
+    return { kind: 'review', reason: 'The ledger did not report when it landed.' }
+  }
+  if (input.blockTime > input.lockExpiresAt + input.graceSeconds) {
     return { kind: 'review', reason: 'It landed after the 10-minute rate lock expired.' }
   }
   return { kind: 'paid' }
