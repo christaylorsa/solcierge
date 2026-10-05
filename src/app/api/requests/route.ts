@@ -95,8 +95,8 @@ export async function POST(request: Request) {
 
     if (error) throw new Error(error.message)
 
-    // Backfill an empty profile name. The email stays on the request: see contactRecord().
-    if (contact.userPatch.name) {
+    // Backfill an empty profile name and contact email. Never users.email: see contactRecord().
+    if (Object.keys(contact.userPatch).length > 0) {
       const { error: patchError } = await db.from('users').update(contact.userPatch).eq('id', viewer.id)
       if (patchError) console.warn('[solcierge] could not backfill contact name:', patchError.message)
     }
@@ -109,7 +109,7 @@ export async function POST(request: Request) {
         budgetMax: budget_max ?? null,
         member: {
           name: viewer.name ?? contact_name ?? null,
-          email: viewer.email ?? contact_email ?? null,
+          email: viewer.email ?? contact_email ?? viewer.contact_email ?? null,
           wallet: viewer.wallet_address,
         },
       }),

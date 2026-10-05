@@ -45,9 +45,12 @@ export function ConnectButton({ compact = false }: { compact?: boolean }) {
 
   // Connected wallet, or an email session.
   if (viewer || (connected && identity)) {
-    const label = identity
-      ? shortAddress(identity, 4)
-      : (viewer?.email?.split('@')[0] ?? 'Member')
+    const firstName = viewer?.name?.split(' ')[0]?.slice(0, 18)
+    const label = firstName
+      ? firstName
+      : identity
+        ? shortAddress(identity, 4)
+        : (viewer?.email?.split('@')[0] ?? 'Member')
 
     return (
       <div className="relative" ref={menuRef}>
@@ -74,6 +77,7 @@ export function ConnectButton({ compact = false }: { compact?: boolean }) {
           >
             <div className="px-3 py-2.5">
               <p className="eyebrow">Signed in as</p>
+              {viewer?.name ? <p className="mt-1 text-sm text-ink">{viewer.name}</p> : null}
               <p className="mt-1 break-all font-mono text-xs text-ink">
                 {viewer?.wallet_address ?? viewer?.email ?? identity}
               </p>
@@ -102,6 +106,9 @@ export function ConnectButton({ compact = false }: { compact?: boolean }) {
             </MenuLink>
             <MenuLink href="/request" onClick={() => setOpen(false)}>
               New request
+            </MenuLink>
+            <MenuLink href="/account/profile" onClick={() => setOpen(false)}>
+              Profile
             </MenuLink>
             {viewer?.isAdmin ? (
               <MenuLink href="/admin" onClick={() => setOpen(false)}>

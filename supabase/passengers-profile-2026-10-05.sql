@@ -1,5 +1,5 @@
 -- ===========================================================================
--- Passenger details for flights (2026-10-05)
+-- Passenger details for flights, and member profiles (2026-10-05)
 --
 -- Run this once in the Supabase SQL editor BEFORE deploying the code that uses
 -- it. Safe to re-run. The same statements are folded into schema.sql.
@@ -39,12 +39,21 @@ exception when others then
 end
 $outer$;
 
--- Erasure removes a member's manifests outright.
+-- --- member profile -----------------------------------------------------------
+-- Set by the member on /account/profile. contact_email is unverified, so it is
+-- never a login identity (that is users.email, set only by a verified sign-in,
+-- see SA-02): it only receives booking updates, which carry no personal data.
+
+alter table public.users add column if not exists contact_email text;
+alter table public.users add column if not exists phone text;
+
+-- Erasure removes a member's manifests outright and clears their profile.
 create or replace function public.anonymize_user(target uuid)
 returns void language plpgsql as $$
 begin
   update public.users
      set name = null, email = null, wallet_address = null,
+         contact_email = null, phone = null,
          telegram_chat_id = null, telegram_linked_at = null,
          telegram_link_code = null, telegram_link_expires_at = null,
          anonymized_at = now()

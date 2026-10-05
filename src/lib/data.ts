@@ -15,7 +15,7 @@ const REQUEST_COLUMNS: string = `
 
 const REQUEST_COLUMNS_WITH_USER: string = `
   ${REQUEST_COLUMNS},
-  users ( id, wallet_address, email, name, telegram_chat_id )
+  users ( id, wallet_address, email, name, telegram_chat_id, contact_email, phone )
 `
 
 type RawRow = Record<string, unknown> & {
@@ -119,4 +119,26 @@ export async function hasTelegramLinked(userId: string): Promise<boolean> {
     .maybeSingle()
   if (error) throw new Error(error.message)
   return Boolean(data?.telegram_chat_id)
+}
+
+export type Profile = {
+  name: string | null
+  contact_email: string | null
+  phone: string | null
+  telegram_linked: boolean
+}
+
+export async function getProfile(userId: string): Promise<Profile> {
+  const { data, error } = await supabaseAdmin()
+    .from('users')
+    .select('name, contact_email, phone, telegram_chat_id')
+    .eq('id', userId)
+    .maybeSingle()
+  if (error) throw new Error(error.message)
+  return {
+    name: data?.name ?? null,
+    contact_email: data?.contact_email ?? null,
+    phone: data?.phone ?? null,
+    telegram_linked: Boolean(data?.telegram_chat_id),
+  }
 }

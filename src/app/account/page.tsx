@@ -51,9 +51,14 @@ export default async function AccountPage() {
           eyebrow={viewer.wallet_address ? shortAddress(viewer.wallet_address, 6) : (viewer.email ?? 'Member')}
           title={viewer.name ? `Good to see you, ${viewer.name.split(' ')[0]}` : 'Your bookings'}
         />
-        <Link href="/request" className="btn btn-primary">
-          New request
-        </Link>
+        <div className="flex flex-wrap gap-3">
+          <Link href="/account/profile" className="btn btn-ghost">
+            Profile
+          </Link>
+          <Link href="/request" className="btn btn-primary">
+            New request
+          </Link>
+        </div>
       </div>
 
       {loadError ? (

@@ -43,6 +43,12 @@ create table if not exists public.users (
   )
 );
 
+-- Profile fields the member sets on /account/profile. contact_email is
+-- unverified, so it is never a login identity (SA-02): it only receives booking
+-- updates, which carry no personal data.
+alter table public.users add column if not exists contact_email text;
+alter table public.users add column if not exists phone text;
+
 -- --- booking_requests ------------------------------------------------------
 
 create table if not exists public.booking_requests (
@@ -294,7 +300,7 @@ grant all on public.users, public.booking_requests, public.quotes,
 --
 --   select public.anonymize_user('<user id>');
 --
--- That clears the member's name, email, wallet and Telegram link, deletes their
+-- That clears the member's profile, wallet and Telegram link, deletes their
 -- passenger manifests, and strips the free-text brief and typed contact details
 -- from their requests, while bookings, quotes and payments remain. Uploaded documents are not touched: Postgres cannot
 -- delete Storage files, so remove the booking's folder in the Storage dashboard.
@@ -318,6 +324,7 @@ returns void language plpgsql as $$
 begin
   update public.users
      set name = null, email = null, wallet_address = null,
+         contact_email = null, phone = null,
          telegram_chat_id = null, telegram_linked_at = null,
          telegram_link_code = null, telegram_link_expires_at = null,
          anonymized_at = now()

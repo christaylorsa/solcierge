@@ -92,7 +92,13 @@ export type BookingRequestFull = BookingRequest & {
   quote: Quote | null
   payment: Payment | null
   documents: BookingDocument[]
-  user?: (Pick<User, 'id' | 'wallet_address' | 'email' | 'name'> & { telegram_chat_id?: number | null }) | null
+  user?:
+    | (Pick<User, 'id' | 'wallet_address' | 'email' | 'name'> & {
+        telegram_chat_id?: number | null
+        contact_email?: string | null
+        phone?: string | null
+      })
+    | null
 }
 
 export type PaymentIntent = {
@@ -113,8 +119,11 @@ export type PaymentIntent = {
 export type Viewer = {
   id: string
   wallet_address: string | null
+  /** Verified sign-in email. A login identity. */
   email: string | null
   name: string | null
+  /** Typed on the profile, unverified. Booking updates only, never a login (SA-02). */
+  contact_email: string | null
   isAdmin: boolean
 }
 

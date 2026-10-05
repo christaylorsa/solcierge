@@ -274,7 +274,7 @@ export function RequestForm({ category }: { category: Category }) {
           .
         </p>
 
-        {!viewer.name || !viewer.email ? (
+        {!viewer.name || !(viewer.email || viewer.contact_email) ? (
           <div className="grid gap-5 border-t border-line pt-6 sm:grid-cols-2">
             {!viewer.name ? (
               <Field label="Your name" hint="How the desk should address you">
@@ -287,7 +287,7 @@ export function RequestForm({ category }: { category: Category }) {
                 />
               </Field>
             ) : null}
-            {!viewer.email ? (
+            {!(viewer.email || viewer.contact_email) ? (
               <Field label="Email" hint="For confirmations, never marketing">
                 <input
                   className="field"

@@ -5,6 +5,8 @@ import { supabaseAdmin } from '@/lib/supabase/admin'
 import { supabaseRouteClient } from '@/lib/supabase/server'
 import type { Viewer } from '@/lib/types'
 
+const USER_COLUMNS = 'id, wallet_address, email, name, contact_email'
+
 /**
  * Resolves the current member from either identity path:
  *   1. a wallet session cookie (signature-verified at sign-in), or
@@ -28,7 +30,7 @@ export async function getViewer(): Promise<Viewer | null> {
   if (walletSession) {
     const { data } = await supabaseAdmin()
       .from('users')
-      .select('id, wallet_address, email, name')
+      .select(USER_COLUMNS)
       .eq('id', walletSession.userId)
       .maybeSingle()
 
@@ -40,6 +42,7 @@ export async function getViewer(): Promise<Viewer | null> {
         wallet_address: data.wallet_address,
         email: data.email,
         name: data.name,
+        contact_email: data.contact_email,
         // Judged on the signed-in wallet only. users.email is member-writable.
         isAdmin: isAdminIdentity({ kind: 'wallet', wallet: walletSession.wallet }, allow),
       }
@@ -65,6 +68,7 @@ export async function getViewer(): Promise<Viewer | null> {
     wallet_address: user.wallet_address,
     email: user.email,
     name: user.name,
+    contact_email: user.contact_email,
     // Judged on the email Supabase verified for this session, not the row's columns.
     isAdmin: isAdminIdentity({ kind: 'email', email }, allow),
   }
@@ -100,7 +104,7 @@ export async function upsertUserByWallet(wallet: string) {
 
   const existing = await db
     .from('users')
-    .select('id, wallet_address, email, name')
+    .select(USER_COLUMNS)
     .eq('wallet_address', wallet)
     .maybeSingle()
 
@@ -109,14 +113,14 @@ export async function upsertUserByWallet(wallet: string) {
   const created = await db
     .from('users')
     .insert({ wallet_address: wallet })
-    .select('id, wallet_address, email, name')
+    .select(USER_COLUMNS)
     .single()
 
   if (created.error) {
     // Lost a race against a concurrent sign-in. Read the winner's row.
     const retry = await db
       .from('users')
-      .select('id, wallet_address, email, name')
+      .select(USER_COLUMNS)
       .eq('wallet_address', wallet)
       .maybeSingle()
     return retry.data
@@ -130,7 +134,7 @@ export async function upsertUserByEmail(email: string) {
 
   const existing = await db
     .from('users')
-    .select('id, wallet_address, email, name')
+    .select(USER_COLUMNS)
     .eq('email', normalised)
     .maybeSingle()
 
@@ -139,13 +143,13 @@ export async function upsertUserByEmail(email: string) {
   const created = await db
     .from('users')
     .insert({ email: normalised })
-    .select('id, wallet_address, email, name')
+    .select(USER_COLUMNS)
     .single()
 
   if (created.error) {
     const retry = await db
       .from('users')
-      .select('id, wallet_address, email, name')
+      .select(USER_COLUMNS)
       .eq('email', normalised)
       .maybeSingle()
     return retry.data

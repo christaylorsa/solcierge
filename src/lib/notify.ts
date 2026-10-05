@@ -182,13 +182,13 @@ function bookingHeadline(category: string, d: RequestDetails): string {
 /**
  * Sends a member an update about one of their bookings. Telegram goes to the chat
  * they linked. Email goes to their verified sign-in address, or failing that the
- * address they typed on the brief, which is unverified: so messages carry only a
+ * contact address on their profile or the brief, which is unverified: so messages carry only a
  * headline and a link, and the paperwork itself stays behind sign-in.
  */
 async function sendToMember(requestId: string, build: (headline: string) => Omit<Alert, 'link'> & { linkLabel: string }): Promise<Delivery> {
   const { data, error } = await supabaseAdmin()
     .from('booking_requests')
-    .select('category, details, users ( email, telegram_chat_id )')
+    .select('category, details, users ( email, contact_email, telegram_chat_id )')
     .eq('id', requestId)
     .maybeSingle()
   if (error) throw new Error(error.message)
@@ -196,10 +196,10 @@ async function sendToMember(requestId: string, build: (headline: string) => Omit
 
   const details = (data.details ?? {}) as RequestDetails
   const user = (Array.isArray(data.users) ? data.users[0] : data.users) as
-    | { email: string | null; telegram_chat_id: number | null }
+    | { email: string | null; contact_email: string | null; telegram_chat_id: number | null }
     | null
   const chatId = user?.telegram_chat_id ?? null
-  const email = user?.email ?? details.contact_email ?? null
+  const email = user?.email ?? user?.contact_email ?? details.contact_email ?? null
 
   const { linkLabel, ...rest } = build(bookingHeadline(data.category, details))
   const alert: Alert = { ...rest, link: { label: linkLabel, href: `${publicEnv.siteUrl}/account/${requestId}` } }

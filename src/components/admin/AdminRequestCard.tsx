@@ -134,6 +134,20 @@ export function AdminRequestCard({ request, manifest }: { request: BookingReques
                 <RequestDetails request={request} />
               </div>
 
+              {request.user?.phone || request.user?.contact_email || request.details?.contact_email ? (
+                <p className="mt-6 text-xs text-faint">
+                  Contact:{' '}
+                  {[request.user?.email ?? request.user?.contact_email ?? request.details?.contact_email, request.user?.phone]
+                    .filter(Boolean)
+                    .map((value, index) => (
+                      <span key={index} className="select-all text-muted">
+                        {index > 0 ? ' · ' : ''}
+                        {value}
+                      </span>
+                    ))}
+                </p>
+              ) : null}
+
               {request.payment ? (
                 <div className="mt-8 border-t border-line pt-6">
                   <h3 className="eyebrow text-success">Payment</h3>
