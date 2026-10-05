@@ -1,0 +1,12 @@
+node_modules
+.next
+.next-check
+.env
+.env.local
+.env*.local
+*.zip
+*.pem
+.DS_Store
+.claude
+*.tsbuildinfo
+.next-preview

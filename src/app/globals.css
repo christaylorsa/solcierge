@@ -1,0 +1,823 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ==========================================================================
+   Design tokens. The whole product is themed from this block: every colour,
+   radius and easing below is referenced through Tailwind's config, so a
+   re-theme is a change here and nowhere else.
+   ========================================================================== */
+
+:root {
+  /* Colours are stored as bare RGB channels, not hex.
+     That is what lets Tailwind inject an alpha: the config wraps each one as
+     rgb(var(--token) / <alpha-value>), so `bg-bg/70` and `border-accent/40` resolve
+     properly. A hex token silently produces transparent white instead. In plain CSS
+     below, always write rgb(var(--token)) or rgb(var(--token) / 0.3). */
+  --bg: 8 7 10;
+  --surface: 13 12 17;
+  --raised: 20 18 26;
+  --ink: 244 241 234;
+  --muted: 161 154 141;
+  --faint: 107 101 89;
+  --accent: 201 169 78;
+  --accent-soft: 227 205 140;
+  --danger: 217 123 108;
+  --success: 127 174 135;
+  /* Text on a gold fill. */
+  --on-accent: 16 13 6;
+
+  /* Derived, so a palette change carries the hairlines with it. */
+  --line: rgb(var(--accent) / 0.16);
+
+  --radius: 3px;
+  --radius-sm: 2px;
+  --radius-lg: 6px;
+
+  /* Three curves, mirrored in src/lib/motion.ts for JS-driven motion. Keep in step. */
+  --ease: cubic-bezier(0.16, 0.84, 0.44, 1);
+  /* Long tail. Masked reveals and the hero: the over-long settle is what reads as expensive. */
+  --ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  /* Symmetric. Crossfades and anything that leaves the way it arrived. */
+  --ease-soft: cubic-bezier(0.5, 0, 0.2, 1);
+
+  --font-display: var(--font-cormorant), 'Cormorant Garamond', 'Times New Roman', serif;
+  --font-text: var(--font-inter), ui-sans-serif, system-ui, -apple-system, sans-serif;
+
+  --shell-x: clamp(1.25rem, 5vw, 4rem);
+}
+
+* {
+  border-color: var(--line);
+}
+
+html {
+  /* Anchors land clear of the fixed header. */
+  scroll-padding-top: 6rem;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background-color: rgb(var(--bg));
+  color: rgb(var(--ink));
+  font-family: var(--font-text);
+  font-feature-settings: 'kern' 1, 'liga' 1;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: rgb(var(--accent) / 0.28);
+  color: rgb(var(--ink));
+}
+
+:focus-visible {
+  outline: 1px solid rgb(var(--accent));
+  outline-offset: 3px;
+}
+
+/* Firefox keeps a dark scrollbar consistent with the page. */
+* {
+  scrollbar-color: rgb(var(--accent) / 0.3) rgb(var(--bg));
+}
+
+/* ==========================================================================
+   Type
+   ========================================================================== */
+
+.display {
+  font-family: var(--font-display);
+  font-weight: 300;
+  letter-spacing: -0.015em;
+  line-height: 1.02;
+}
+
+.eyebrow {
+  font-size: 0.6875rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgb(var(--faint));
+}
+
+.lede {
+  color: rgb(var(--muted));
+  font-size: clamp(1rem, 1.6vw, 1.125rem);
+  line-height: 1.7;
+}
+
+.rule {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--line) 18%, var(--line) 82%, transparent);
+}
+
+/* ==========================================================================
+   Photography. Every photograph on the site is pulled a little off full
+   saturation and down in brightness, so a set of images shot by different people
+   under different light still reads as one palette against the gold.
+   ========================================================================== */
+
+.photo {
+  filter: saturate(0.78) contrast(1.06) brightness(0.92);
+}
+
+/* ==========================================================================
+   Motion. One IntersectionObserver in useReveal() adds .in-view; every scroll
+   animation on the site is a CSS end-state keyed off that single class.
+   ========================================================================== */
+
+.reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition:
+    opacity 0.8s var(--ease),
+    transform 0.8s var(--ease);
+}
+
+.reveal.in-view {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Staggered children. Each child carries an inline --i, so the delay is pure CSS. */
+.stagger > * {
+  opacity: 0;
+  transform: translateY(18px);
+  transition:
+    opacity 0.7s var(--ease),
+    transform 0.7s var(--ease);
+  transition-delay: calc(var(--i, 0) * 70ms);
+}
+
+.stagger.in-view > * {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Word-by-word headline. Same mechanism, tighter travel. */
+.stagger-words > span {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(0.4em);
+  transition:
+    opacity 0.9s var(--ease),
+    transform 0.9s var(--ease);
+  transition-delay: calc(var(--i, 0) * 70ms);
+}
+
+.stagger-words.in-view > span {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Hairline that draws itself in as a section arrives. */
+.section-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--line) 20%, var(--line) 80%, transparent);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 1.1s var(--ease);
+}
+
+.section-divider.in-view {
+  transform: scaleX(1);
+}
+
+/* ==========================================================================
+   Hero glow. Follows the cursor on precise pointers only; the media query below
+   is the safety net behind the JS gate in HeroGlow.
+   ========================================================================== */
+
+.hero-glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    460px circle at var(--gx, 50%) var(--gy, 34%),
+    rgb(var(--accent) / 0.14),
+    rgb(var(--accent) / 0.04) 42%,
+    transparent 68%
+  );
+  transition: background-position 0.2s var(--ease);
+}
+
+@media (hover: none), (pointer: coarse) {
+  .hero-glow {
+    display: none !important;
+  }
+}
+
+/* ==========================================================================
+   Crossfade carousel. A symmetric curve, not --ease: a fade that accelerates
+   out and eases in looks lopsided.
+   ========================================================================== */
+
+.crossfade {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 1.4s ease-in-out;
+}
+
+.crossfade.active {
+  opacity: 1;
+}
+
+/* ==========================================================================
+   Hover lift. Degrades to nothing on touch rather than sticking on tap.
+   ========================================================================== */
+
+@media (hover: hover) and (pointer: fine) {
+  .lift {
+    transition:
+      transform 0.5s var(--ease),
+      border-color 0.5s var(--ease);
+  }
+  .lift:hover {
+    transform: translateY(-6px);
+    border-color: rgb(var(--accent) / 0.42);
+  }
+  .lift:hover .lift-zoom {
+    transform: scale(1.08);
+  }
+  .lift-zoom {
+    transition: transform 0.9s var(--ease);
+  }
+}
+
+/* ==========================================================================
+   Field primitives, so forms stay consistent without a component per input.
+   ========================================================================== */
+
+.field {
+  width: 100%;
+  background: rgb(var(--surface));
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: rgb(var(--ink));
+  padding: 0.75rem 0.875rem;
+  font-size: 0.9375rem;
+  transition:
+    border-color 0.3s var(--ease),
+    background-color 0.3s var(--ease);
+}
+
+.field::placeholder {
+  color: rgb(var(--faint));
+}
+
+.field:hover {
+  border-color: rgb(var(--accent) / 0.3);
+}
+
+.field:focus {
+  outline: none;
+  border-color: rgb(var(--accent));
+  background: rgb(var(--raised));
+}
+
+.field[aria-invalid='true'] {
+  border-color: rgb(var(--danger));
+}
+
+/* Dark-scheme native controls, so date pickers and selects do not flash white. */
+.field,
+select.field option {
+  color-scheme: dark;
+}
+
+.field-label {
+  display: block;
+  font-size: 0.6875rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgb(var(--muted));
+  margin-bottom: 0.5rem;
+}
+
+/* ==========================================================================
+   Buttons
+   ========================================================================== */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: var(--radius);
+  font-size: 0.8125rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.875rem 1.5rem;
+  transition:
+    background-color 0.4s var(--ease),
+    color 0.4s var(--ease),
+    border-color 0.4s var(--ease),
+    opacity 0.3s var(--ease);
+  cursor: pointer;
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: rgb(var(--accent));
+  color: rgb(var(--on-accent));
+  border: 1px solid rgb(var(--accent));
+  font-weight: 500;
+}
+
+.btn-primary:not(:disabled):hover {
+  background: rgb(var(--accent-soft));
+  border-color: rgb(var(--accent-soft));
+}
+
+.btn-ghost {
+  background: transparent;
+  color: rgb(var(--ink));
+  border: 1px solid var(--line);
+}
+
+.btn-ghost:not(:disabled):hover {
+  border-color: rgb(var(--accent));
+  color: rgb(var(--accent-soft));
+}
+
+.btn-quiet {
+  background: transparent;
+  color: rgb(var(--muted));
+  border: 1px solid transparent;
+  padding: 0.625rem 0.875rem;
+}
+
+.btn-quiet:not(:disabled):hover {
+  color: rgb(var(--ink));
+}
+
+/* Gold underline that grows from the left. Used for inline text links. */
+.link-underline {
+  position: relative;
+  color: rgb(var(--accent-soft));
+}
+
+.link-underline::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -2px;
+  width: 100%;
+  height: 1px;
+  background: rgb(var(--accent));
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.45s var(--ease);
+}
+
+.link-underline:hover::after {
+  transform: scaleX(1);
+}
+
+/* ==========================================================================
+   The wallet adapter modal ships its own light-ish chrome. Re-skin it with our
+   tokens rather than shipping a second visual language.
+   ========================================================================== */
+
+.wallet-adapter-modal-wrapper {
+  background: rgb(var(--surface)) !important;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg) !important;
+  font-family: var(--font-text) !important;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.7) !important;
+}
+
+.wallet-adapter-modal-title {
+  font-family: var(--font-display) !important;
+  font-weight: 300 !important;
+  color: rgb(var(--ink)) !important;
+  font-size: 1.5rem !important;
+  letter-spacing: -0.01em;
+}
+
+.wallet-adapter-modal-list li {
+  background: rgb(var(--raised)) !important;
+  border: 1px solid var(--line);
+  border-radius: var(--radius) !important;
+}
+
+.wallet-adapter-modal-list .wallet-adapter-button {
+  font-family: var(--font-text) !important;
+  color: rgb(var(--ink)) !important;
+  font-size: 0.9375rem !important;
+  border-radius: var(--radius) !important;
+}
+
+.wallet-adapter-modal-list .wallet-adapter-button:hover {
+  background: rgb(var(--accent) / 0.09) !important;
+}
+
+.wallet-adapter-modal-button-close {
+  background: rgb(var(--raised)) !important;
+}
+
+.wallet-adapter-modal-button-close svg {
+  fill: rgb(var(--muted)) !important;
+}
+
+.wallet-adapter-modal-list-more {
+  color: rgb(var(--accent-soft)) !important;
+}
+
+/* ==========================================================================
+   Atmosphere: film grain and vignette.
+   The grain steps rather than tweens, because real emulsion jumps between frames
+   and a smooth tween reads as drifting dust. One tiling noise texture as a data
+   URI, so there is no canvas and no rAF loop: the compositor does all of it.
+   ========================================================================== */
+
+.film-grain {
+  position: absolute;
+  /* Oversized so the shifting transform never exposes an edge. */
+  inset: -50%;
+  pointer-events: none;
+  opacity: 0.075;
+  mix-blend-mode: overlay;
+  background-repeat: repeat;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
+}
+
+.film-grain--animate {
+  animation: grain-shift 1s steps(4) infinite;
+}
+
+@keyframes grain-shift {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  25% {
+    transform: translate3d(-2%, 1%, 0);
+  }
+  50% {
+    transform: translate3d(1%, -2%, 0);
+  }
+  75% {
+    transform: translate3d(-1%, 2%, 0);
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.film-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(120% 90% at 50% 42%, transparent 42%, rgb(var(--bg) / 0.6) 100%);
+}
+
+/* ==========================================================================
+   Atmosphere: aurora. Two enormous, faint gold gradients drifting against each
+   other. No blur filter: a radial gradient is already soft, and blurring a 46vw
+   element is expensive to composite for no visual gain.
+   ========================================================================== */
+
+.aurora {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.aurora-blob {
+  position: absolute;
+  display: block;
+  border-radius: 50%;
+  opacity: 0.05;
+  background: radial-gradient(circle closest-side, rgb(var(--accent)), transparent);
+  will-change: transform;
+}
+
+.aurora-blob--one {
+  width: 52vw;
+  height: 52vw;
+  left: -10vw;
+  top: -14vw;
+  animation: drift-one 28s var(--ease-soft) infinite alternate;
+}
+
+.aurora-blob--two {
+  width: 42vw;
+  height: 42vw;
+  right: -8vw;
+  bottom: -16vw;
+  animation: drift-two 36s var(--ease-soft) infinite alternate;
+}
+
+@keyframes drift-one {
+  from {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    transform: translate3d(6vw, 4vh, 0) scale(1.12);
+  }
+}
+
+@keyframes drift-two {
+  from {
+    transform: translate3d(0, 0, 0) scale(1.08);
+  }
+  to {
+    transform: translate3d(-5vw, -5vh, 0) scale(1);
+  }
+}
+
+/* ==========================================================================
+   Masked reveals. A line sits inside an overflow-hidden block and rises from
+   behind its own edge, so the type appears to be uncovered rather than to fade
+   in. Driven by the same single IntersectionObserver as everything else: the
+   observer adds .in-view and CSS does the rest.
+   ========================================================================== */
+
+.mask-line {
+  display: block;
+  overflow: hidden;
+  /* Descenders would otherwise be clipped by the mask edge. */
+  padding-bottom: 0.08em;
+  margin-bottom: -0.08em;
+}
+
+.mask-line > span {
+  display: block;
+  transform: translateY(110%);
+  transition: transform 1.1s var(--ease-expo);
+  transition-delay: calc(var(--i, 0) * 90ms);
+}
+
+.mask-reveal.in-view .mask-line > span,
+.mask-line.in-view > span {
+  transform: translateY(0);
+}
+
+/* Eyebrow label with a hairline that draws out beside it. */
+.eyebrow-rule {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.eyebrow-rule > .eyebrow-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, rgb(var(--accent) / 0.55), transparent);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 1.6s var(--ease-expo) 0.15s;
+}
+
+.eyebrow-rule.in-view > .eyebrow-line {
+  transform: scaleX(1);
+}
+
+/* ==========================================================================
+   Category card choreography. One hover gesture composed of four moves that
+   share a curve and a duration, so they read as a single response rather than
+   four animations. Gated to precise pointers: on touch the card is just a card.
+   ========================================================================== */
+
+.card-media {
+  transform: scale(1.01);
+  transition: transform 1.2s var(--ease-expo);
+}
+
+.card-scrim {
+  opacity: 0;
+  transition: opacity 0.8s var(--ease);
+}
+
+.card-title {
+  transition: transform 0.7s var(--ease-expo);
+}
+
+.card-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: color 0.6s var(--ease);
+}
+
+.card-arrow {
+  display: inline-block;
+  opacity: 0;
+  transform: translateX(-6px);
+  transition:
+    opacity 0.6s var(--ease),
+    transform 0.7s var(--ease-expo);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .card:hover .card-media {
+    transform: scale(1.07);
+  }
+  .card:hover .card-scrim {
+    opacity: 1;
+  }
+  .card:hover .card-title {
+    transform: translateY(-4px);
+  }
+  .card:hover .card-cta {
+    color: rgb(var(--accent-soft));
+  }
+  .card:hover .card-arrow {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  /* Gold edge, drawn as a box-shadow so it never affects layout. */
+  .card {
+    transition:
+      box-shadow 0.8s var(--ease),
+      border-color 0.8s var(--ease);
+  }
+  .card:hover {
+    border-color: rgb(var(--accent) / 0.4);
+    box-shadow:
+      0 0 0 1px rgb(var(--accent) / 0.12),
+      0 24px 60px -30px rgb(var(--accent) / 0.28);
+  }
+}
+
+/* ==========================================================================
+   Ghosted process numerals. Enormous, nearly invisible, and parallaxed by
+   Framer in HowItWorks. Sized in vw so they stay proportionate to the column.
+   ========================================================================== */
+
+.ghost-numeral {
+  font-family: var(--font-display);
+  font-size: clamp(5rem, 13vw, 11rem);
+  line-height: 0.8;
+  color: rgb(var(--accent) / 0.07);
+  user-select: none;
+  pointer-events: none;
+  will-change: transform;
+}
+
+/* ==========================================================================
+   Cursor.
+   The system cursor, deliberately. Two custom versions were built and both read
+   as cheap: a spring-following gold ring, then a gold-filled arrow. At 26px a
+   saturated fill is the same signal as a downloaded cursor pack, and the ring
+   traded away the precision a pointer exists to provide.
+
+   This site's polish comes from the typography, the whitespace and the motion
+   restraint. A recoloured pointer competes with that instead of adding to it, and
+   interactivity is already signalled where it belongs: the card hover
+   choreography, the growing link underlines, the button fills.
+
+   All that remains is the affordance browsers get wrong. Links already show a
+   pointer; buttons do not, in most engines.
+   ========================================================================== */
+
+button:not(:disabled),
+summary,
+label[for],
+[role='button'] {
+  cursor: pointer;
+}
+
+/* A disabled control should not promise a click. */
+button:disabled,
+a[aria-disabled='true'] {
+  cursor: not-allowed;
+}
+
+/* ==========================================================================
+   Rate-lock ring. The signature moment: a gold arc that unwinds over ten
+   minutes beside odometer digits.
+   ========================================================================== */
+
+.lock-arc {
+  /* Start the sweep at twelve o'clock and run clockwise. */
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
+}
+
+.odometer {
+  display: inline-flex;
+  align-items: flex-end;
+
+  /* The text face, not the display serif.
+     Cormorant Garamond sets old-style figures: the 4 and 7 descend below the baseline,
+     the 1 sits at x-height and the 8 ascends, and every digit has a different advance
+     width. Lovely in prose, unusable in a clock, where it makes the readout jump around
+     and pushes ink outside the em box so neighbouring digits bleed through the mask.
+     A ticking value needs lining, equal-width figures. */
+  font-family: var(--font-text);
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: 'tnum' 1, 'lnum' 1;
+  font-weight: 300;
+  letter-spacing: 0.02em;
+}
+
+/* One cell height shared by the mask, the strip items and the translation, so the three
+   can never disagree. 1.15em leaves headroom around the glyphs: at exactly 1em any font
+   whose ink reaches the em box edge will show a sliver of the digit above. */
+.odometer {
+  --cell: 1.15em;
+}
+
+.odometer-window {
+  display: block;
+  overflow: hidden;
+  height: var(--cell);
+}
+
+.odometer-strip {
+  display: block;
+  transition: transform 0.7s var(--ease-expo);
+  will-change: transform;
+}
+
+.odometer-strip > span {
+  display: block;
+  height: var(--cell);
+  line-height: var(--cell);
+  text-align: center;
+}
+
+/* Colons and decimal points: same box as a digit so everything shares one baseline. */
+.odometer-sep {
+  display: block;
+  height: var(--cell);
+  line-height: var(--cell);
+  /* Tightened, because a tabular colon otherwise sits in a full digit-width slot. */
+  margin: 0 -0.06em;
+}
+
+/* ==========================================================================
+   Reduced motion. Nothing moves; everything is legible in its end state.
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .reveal,
+  .stagger > *,
+  .stagger-words > span {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .section-divider {
+    transform: scaleX(1) !important;
+  }
+
+  .hero-glow {
+    display: none !important;
+  }
+
+  .crossfade {
+    transition: none !important;
+  }
+
+  /* New motion layer: hold every end state, animate nothing. */
+  .mask-line > span {
+    transform: none !important;
+  }
+
+  .eyebrow-rule > .eyebrow-line {
+    transform: scaleX(1) !important;
+  }
+
+  /* Grain shimmer is the effect; the static texture is fine to keep. */
+  .film-grain--animate {
+    animation: none !important;
+  }
+
+  /* Gradients stay as depth, the drift stops. */
+  .aurora-blob {
+    animation: none !important;
+    will-change: auto;
+  }
+
+  .card-media {
+    transform: none !important;
+  }
+
+  .ghost-numeral {
+    will-change: auto;
+  }
+
+  .odometer-strip {
+    transition: none !important;
+    will-change: auto;
+  }
+}
