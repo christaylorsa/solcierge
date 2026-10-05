@@ -3,6 +3,7 @@ import { fail, handleError, ok, readJson } from '@/lib/api'
 import { requireAdmin } from '@/lib/auth'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { REQUEST_STATUSES, type RequestStatus } from '@/lib/types'
+import { isUuid } from '@/lib/validate'
 
 export const dynamic = 'force-dynamic'
 
@@ -24,6 +25,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
   try {
     await requireAdmin()
     const { id } = await context.params
+    if (!isUuid(id)) return fail('That request no longer exists.', 404)
 
     const parsed = schema.safeParse(await readJson<unknown>(request))
     if (!parsed.success) return fail('That is not a status we recognise.', 422)

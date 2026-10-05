@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import type { BookingRequestFull, RequestStatus } from '@/lib/types'
+import { isUuid } from '@/lib/validate'
 
 // Typed as plain `string`, not a literal: supabase-js tries to parse a literal select
 // at the type level, and it cannot follow two embedded resources plus a join. We shape
@@ -58,6 +59,8 @@ export async function listRequestsForUser(userId: string): Promise<BookingReques
  * Pass null only from admin paths.
  */
 export async function getRequest(id: string, ownerId: string | null): Promise<BookingRequestFull | null> {
+  // A non-uuid id (from a hand-typed URL) is simply not found, not a Postgres error.
+  if (!isUuid(id)) return null
   let query = supabaseAdmin()
     .from('booking_requests')
     .select(ownerId ? REQUEST_COLUMNS : REQUEST_COLUMNS_WITH_USER)

@@ -1,6 +1,7 @@
 import { PublicKey } from '@solana/web3.js'
 import bs58 from 'bs58'
 import nacl from 'tweetnacl'
+import { z } from 'zod'
 import { fail, handleError, ok, readJson } from '@/lib/api'
 import { upsertUserByWallet } from '@/lib/auth'
 import { consumeNonce, issueWalletSession } from '@/lib/session'
@@ -8,7 +9,11 @@ import { signInMessage } from '@/lib/siws'
 
 export const dynamic = 'force-dynamic'
 
-type Body = { wallet?: string; signature?: string; nonce?: string }
+const schema = z.object({
+  wallet: z.string().max(64),
+  signature: z.string().max(128),
+  nonce: z.string().regex(/^[0-9a-f]{32}$/),
+})
 
 /**
  * Step two of wallet sign-in. Verifies an ed25519 signature over the nonce message
@@ -17,10 +22,9 @@ type Body = { wallet?: string; signature?: string; nonce?: string }
  */
 export async function POST(request: Request) {
   try {
-    const body = await readJson<Body>(request)
-    if (!body?.wallet || !body.signature || !body.nonce) {
-      return fail('Wallet, signature and nonce are all required.')
-    }
+    const parsed = schema.safeParse(await readJson<unknown>(request))
+    if (!parsed.success) return fail('Wallet, signature and nonce are all required.')
+    const body = parsed.data
 
     const challenge = await consumeNonce(body.nonce, body.wallet)
     if (!challenge) {

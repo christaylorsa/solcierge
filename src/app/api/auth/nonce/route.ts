@@ -1,7 +1,8 @@
-import { handleError, ok } from '@/lib/api'
+import { fail, handleError, ok } from '@/lib/api'
 import { publicEnv } from '@/lib/env'
 import { issueNonce } from '@/lib/session'
 import { signInMessage, siwsChainId } from '@/lib/siws'
+import { isSolanaAddress } from '@/lib/validate'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,7 +16,7 @@ export async function GET(request: Request) {
   try {
     const url = new URL(request.url)
     const wallet = url.searchParams.get('wallet')
-    if (!wallet) return ok({ error: 'A wallet address is required.' }, { status: 400 })
+    if (!isSolanaAddress(wallet)) return fail('A valid wallet address is required.', 400)
 
     // Bound to the host that served this request: any host that routes here is ours,
     // and the wallet compares it with the page the member is actually on.
