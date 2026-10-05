@@ -144,6 +144,14 @@ export const CATEGORY_BY_SLUG: Record<CategorySlug, Category> = CATEGORIES.reduc
   {} as Record<CategorySlug, Category>,
 )
 
+/**
+ * Required on the site and in jet marketing for US flights (14 CFR 295.23 and
+ * 295.24), and the right framing everywhere: the operator, not Solcierge, has
+ * operational control of the aircraft.
+ */
+export const AIR_CHARTER_BROKER_STATEMENT =
+  'Solcierge is an air charter broker and is not a direct air carrier. It does not have operational control of any aircraft. All flights are operated by properly licensed air carriers, named in your quote, which have operational control of the flight.'
+
 export function categoryName(slug: string): string {
   return CATEGORY_BY_SLUG[slug as CategorySlug]?.name ?? slug
 }

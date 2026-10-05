@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Reveal } from '@/components/motion/Reveal'
 import { RequestForm } from '@/components/request/RequestForm'
-import { CATEGORIES, CATEGORY_BY_SLUG } from '@/lib/categories'
+import { AIR_CHARTER_BROKER_STATEMENT, CATEGORIES, CATEGORY_BY_SLUG } from '@/lib/categories'
 import { isCategorySlug } from '@/lib/types'
 
 export function generateStaticParams() {
@@ -101,6 +101,12 @@ export default async function CategoryRequestPage({
                   minutes with the countdown on screen.
                 </p>
               </div>
+              {category.slug === 'jets' ? (
+                <div>
+                  <p className="eyebrow">Who flies you</p>
+                  <p className="mt-2.5 text-muted">{AIR_CHARTER_BROKER_STATEMENT}</p>
+                </div>
+              ) : null}
             </div>
 
             <div className="border-t border-line pt-7">
