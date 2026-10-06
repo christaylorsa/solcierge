@@ -657,6 +657,9 @@ select.field option {
   font-family: var(--font-display);
   font-size: clamp(5rem, 13vw, 11rem);
   line-height: 0.8;
+  /* A fixed box wider than any pair of digits, so every step's title starts on the same
+     line. Each row is its own grid, and an auto column would follow the numeral's width. */
+  min-width: 0.98em;
   color: rgb(var(--accent) / 0.07);
   user-select: none;
   pointer-events: none;
