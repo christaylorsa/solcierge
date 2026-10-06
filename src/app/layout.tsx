@@ -28,6 +28,8 @@ const text = Inter({
   display: 'swap',
 })
 
+const OG_ALT = 'Solcierge: Book anything. Pay in crypto. Quoted in USD, settled in SOL or USDC.'
+
 export const metadata: Metadata = {
   metadataBase: new URL(publicEnv.siteUrl),
   title: {
@@ -37,7 +39,10 @@ export const metadata: Metadata = {
   description:
     'A crypto-native luxury concierge. Brief us on jets, yachts, villas, cars, tables or access, take a quote, and settle in SOL or USDC.',
   // Cache-busted, so a favicon change is not stuck behind a browser cache.
-  icons: { icon: [{ url: '/icon.svg?v=1', type: 'image/svg+xml' }] },
+  icons: {
+    icon: [{ url: '/icon.svg?v=1', type: 'image/svg+xml' }],
+    apple: [{ url: '/apple-icon.png?v=1', sizes: '180x180', type: 'image/png' }],
+  },
   openGraph: {
     title: 'Solcierge · Book anything. Pay in crypto.',
     description:
@@ -45,9 +50,10 @@ export const metadata: Metadata = {
     url: publicEnv.siteUrl,
     siteName: 'Solcierge',
     type: 'website',
-    images: [{ url: '/media/hero-1.jpg', width: 1920, height: 1200, alt: 'Solcierge' }],
+    // A branded 1200x630 card; the source is scripts/og-card.html, rendered headless.
+    images: [{ url: '/media/og.jpg', width: 1200, height: 630, alt: OG_ALT }],
   },
-  twitter: { card: 'summary_large_image' },
+  twitter: { card: 'summary_large_image', images: [{ url: '/media/og.jpg', alt: OG_ALT }] },
   robots: { index: true, follow: true },
 }
 
