@@ -1,6 +1,6 @@
 # Solcierge
 
-A crypto-native luxury concierge marketplace. Members brief a desk on jets, yachts, villas,
+A crypto-native luxury concierge. Members brief a desk on jets, yachts, villas,
 cars, tables or access, an operator quotes in USD, and the member settles in SOL or USDC on
 Solana. Payments are verified against the ledger before anything is marked paid.
 
@@ -55,6 +55,19 @@ live mainnet product during the hackathon:
 - **Pre-launch compliance pass:** terms acceptance recorded with each payment intent, air charter
   broker disclosure (14 CFR 295), unverifiable marketing claims removed, payment records retained on
   erasure via anonymisation, and server functions moved to Frankfurt next to the database.
+- **Security audit, then fixes:** a line-by-line review of every server route, the payment verifier
+  and the auth code ([SECURITY-AUDIT.md](SECURITY-AUDIT.md)). All 18 Critical, High, Medium and Low
+  findings are fixed, one commit each, most with a regression test: domain-bound sign-in messages,
+  a cluster check so test-network funds cannot settle mainnet bookings, verification at
+  `finalized`, concurrency-safe rate locks, and same-origin enforcement on every API write. The test
+  suite went from 26 to 100.
+- **Booking paperwork:** the desk attaches a booking reference, an itinerary and documents to a
+  confirmed booking (private storage, short-lived signed URLs), and the member sees them under
+  "Your paperwork".
+- **Member updates on Telegram:** members link @SolciergeDeskbot with a one-time code and are pinged
+  when a quote lands, when a booking is confirmed, and when the desk sends a note.
+- **Passenger details for flights:** collected after payment, sealed with AES-GCM before they reach
+  the database, and deleted automatically 30 days after travel, or at once on cancellation.
 - **Fixes found in production:** a server crash from an ESM-only transitive dependency on Vercel's
   runtime (pinned via `overrides`), and browser RPC calls that mainnet's public endpoint refuses.
 
