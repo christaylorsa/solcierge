@@ -6,6 +6,8 @@ import { useWalletModal } from '@solana/wallet-adapter-react-ui'
 import { useSession } from '@/components/auth/SessionProvider'
 import { EmailSignIn } from '@/components/auth/EmailSignIn'
 import { AirportInput } from './AirportInput'
+import { LocationPicker } from './LocationPicker'
+import { isPlaceCategory, type PlaceCategory } from '@/lib/places'
 import type { Category } from '@/lib/categories'
 
 type Values = {
@@ -150,16 +152,13 @@ export function RequestForm({ category }: { category: Category }) {
           </div>
         ) : null}
 
-        {has('location') ? (
-          <Field label="Where" hint="City, region or venue">
-            <input
-              className="field"
-              value={values.location}
-              onChange={set('location')}
-              placeholder={placeholderFor(category.slug)}
-              autoComplete="off"
-            />
-          </Field>
+        {has('location') && isPlaceCategory(category.slug) ? (
+          <LocationPicker
+            category={category.slug}
+            value={values.location}
+            onChange={setValue('location')}
+            {...LOCATION_COPY[category.slug]}
+          />
         ) : null}
 
         {isFlight ? (
@@ -368,19 +367,36 @@ function ReturnSwitch({ checked, onChange }: { checked: boolean; onChange: (chec
   )
 }
 
-function placeholderFor(slug: string): string {
-  switch (slug) {
-    case 'yachts':
-      return 'Amalfi Coast, embarking Positano'
-    case 'villas':
-      return 'Mykonos, Agios Lazaros'
-    case 'cars':
-      return 'Monaco, delivered to Hôtel de Paris'
-    case 'dining':
-      return 'Tokyo, Aoyama'
-    case 'events':
-      return 'Wimbledon, Centre Court'
-    default:
-      return 'City or region'
-  }
+/** What the "Where" field is called and asks for, per category. */
+const LOCATION_COPY: Record<PlaceCategory, { label: string; hint: string; placeholder: string }> = {
+  villas: {
+    label: 'Where',
+    hint: 'Pick a destination or search for one. Add the exact area in the brief if you have it.',
+    placeholder: 'Search destinations, or type your own',
+  },
+  yachts: {
+    label: 'Cruising ground',
+    hint: 'Pick where you want to cruise. Name an embarkation port in the brief if you have one.',
+    placeholder: 'Search cruising grounds and ports',
+  },
+  cars: {
+    label: 'City',
+    hint: 'Pick the city. Give the delivery address and time in the brief.',
+    placeholder: 'Search cities',
+  },
+  dining: {
+    label: 'City',
+    hint: 'Where the table is, or where the chef should come to.',
+    placeholder: 'Search cities and destinations',
+  },
+  events: {
+    label: 'Event',
+    hint: 'Pick the event, or search for one. Name the session or day in the brief.',
+    placeholder: 'Search events, or type the one you want',
+  },
+  bespoke: {
+    label: 'Where',
+    hint: 'Pick a place, or describe it in your own words.',
+    placeholder: 'Search places, or describe it',
+  },
 }
