@@ -72,7 +72,7 @@ export default async function ExperiencePage({ params }: { params: Promise<{ slu
                 </span>
               ) : null}
             </p>
-            <h1 className="display mt-4 text-[clamp(2.75rem,8vw,5.5rem)] leading-[0.95] text-ink">
+            <h1 className="display mt-4 max-w-xl text-[clamp(2.75rem,8vw,5.5rem)] leading-[0.95] text-ink">
               {experience.name}
             </h1>
             <p className="lede mt-6 max-w-xl">{experience.intro}</p>

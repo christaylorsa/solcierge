@@ -11,12 +11,19 @@
 export const EXPERIENCE_SLUGS = [
   'big-five-safari',
   'cape-town',
+  'great-migration-kenya',
+  'gorilla-trekking-rwanda',
+  'namibia-dunes',
   'bali-spiritual-retreat',
   'maldives-escape',
   'swiss-alps-skiing',
   'arctic-expedition',
 ] as const
 export type ExperienceSlug = (typeof EXPERIENCE_SLUGS)[number]
+
+/** For browsing on /experiences. Written as shown on the filter. */
+export const EXPERIENCE_REGIONS = ['Africa', 'Islands', 'Snow and ice'] as const
+export type ExperienceRegion = (typeof EXPERIENCE_REGIONS)[number]
 
 export type ExperienceBeat = {
   /** A short label for where this falls in the trip. */
@@ -30,6 +37,7 @@ export type Experience = {
   name: string
   /** Country or region, shown as the eyebrow. */
   place: string
+  region: ExperienceRegion
   /** One line under the title on cards. */
   tagline: string
   /** Opens the page. Two sentences at most. */
@@ -60,6 +68,7 @@ export const EXPERIENCES: Experience[] = [
     slug: 'big-five-safari',
     name: 'Big Five Safari',
     place: 'South Africa',
+    region: 'Africa',
     tagline: 'Lion, leopard, elephant, buffalo and rhino, with a tracker of your own',
     intro:
       'Private reserves where the guide and tracker work only for your group, and the vehicle leaves when you are ready, not on a timetable. We plan this from Cape Town, so it is home ground.',
@@ -114,6 +123,7 @@ export const EXPERIENCES: Experience[] = [
     slug: 'cape-town',
     name: 'Experience Cape Town',
     place: 'South Africa',
+    region: 'Africa',
     tagline: 'Mountain, ocean and winelands, opened up by people who live here',
     intro:
       'Our desk is in Cape Town, so this one is personal. The tables locals keep to themselves, cellars opened after hours, and the coast road at the right time of day.',
@@ -165,9 +175,172 @@ export const EXPERIENCES: Experience[] = [
     image2Alt: 'The Twelve Apostles and Camps Bay from the air in warm evening light',
   },
   {
+    slug: 'great-migration-kenya',
+    name: 'Great Migration',
+    place: 'Kenya',
+    region: 'Africa',
+    tagline: 'Over a million wildebeest, the Mara River, and a camp of your own',
+    intro:
+      'When the herds cross from the Serengeti into the Masai Mara, we put you in a private conservancy camp with a guide who knows which crossing point to sit at, and the patience to wait for it.',
+    duration: 'Four to seven nights',
+    season: 'Usually July to October, when the herds are in the Mara. River crossings never keep a timetable.',
+    bases: ['Masai Mara', 'Mara North Conservancy', 'Olare Motorogi', 'Naboisho', 'Laikipia', 'Amboseli'],
+    shape: [
+      {
+        when: 'Arrival',
+        title: 'Nairobi, then a bush flight',
+        body: 'Met at the aircraft in Nairobi and flown to an airstrip in the Mara, where your guide and vehicle are waiting.',
+      },
+      {
+        when: 'Every day',
+        title: 'Following the herds',
+        body: 'Long days out with a private guide and vehicle, breakfast in the bush, and back to camp only when you choose.',
+      },
+      {
+        when: 'When they commit',
+        title: 'At the Mara River',
+        body: 'Waiting at the crossing points for the herds to go, with crocodiles in the water and predators on the banks. The waiting is part of it.',
+      },
+      {
+        when: 'One dawn',
+        title: 'Over the plains by balloon',
+        body: 'A hot air balloon at sunrise over the herds, then breakfast laid out wherever it comes down.',
+      },
+      {
+        when: 'Onward',
+        title: 'Laikipia, the coast, or the gorillas',
+        body: 'Rhino and walking safaris in Laikipia, a few days on the beach at Lamu, or a short hop to Rwanda for the gorillas.',
+      },
+    ],
+    included: [
+      'A private conservancy camp, or a private house of your own',
+      'Bush flights from Nairobi',
+      'A private vehicle and guide for your group',
+      'A balloon safari at dawn',
+      'Maasai community and conservation visits',
+      'A Laikipia, beach or gorilla extension',
+    ],
+    briefPrompt:
+      'Who is travelling and their ages, whether it is a first safari, how much you care about seeing a river crossing, and what you would like to join it to.',
+    image: '/media/experiences/great-migration.jpg',
+    imageAlt: 'Wildebeest charging down a dusty bank towards the river',
+    focus: '60% 50%',
+    image2: '/media/experiences/great-migration-2.jpg',
+    image2Alt: 'A lone acacia silhouetted against the setting sun on the plains',
+  },
+  {
+    slug: 'gorilla-trekking-rwanda',
+    name: 'Gorilla Trekking',
+    place: 'Rwanda',
+    region: 'Africa',
+    tagline: 'An hour with a mountain gorilla family in the volcano forests',
+    intro:
+      'Gorillas live in Uganda and Congo too, but we plan this in Rwanda: the finest lodges, the shortest journey, and a helicopter from Kigali to the edge of Volcanoes National Park. The hour with the family is the same; everything around it is better.',
+    duration: 'Three to five nights',
+    season: 'Usually best June to September and December to February, the drier months. Permits are limited, so the earlier the better.',
+    bases: ['Volcanoes National Park', 'Kigali', 'Lake Kivu', 'Nyungwe Forest', 'Akagera'],
+    shape: [
+      {
+        when: 'Arrival',
+        title: 'Kigali, then up to the volcanoes',
+        body: 'A helicopter from Kigali to the foothills of the Virungas, or a scenic drive. Your lodge looks straight out at the volcanoes.',
+      },
+      {
+        when: 'Trek day',
+        title: 'An hour with the gorillas',
+        body: 'Up at dawn for a briefing at park headquarters, then a trek through bamboo and forest with trackers to a habituated family. One hour, seven metres away.',
+      },
+      {
+        when: 'The next day',
+        title: 'Again, or something different',
+        body: 'Many guests trek twice. Or track golden monkeys, or hike to the research camp where Dian Fossey worked.',
+      },
+      {
+        when: 'In between',
+        title: 'Recover',
+        body: 'Massage at the lodge, and an afternoon with the community and conservation teams who protect the park.',
+      },
+      {
+        when: 'Onward',
+        title: 'Chimpanzees, savannah or the Mara',
+        body: 'Chimpanzee tracking in Nyungwe, a Big Five safari in Akagera, or a short flight to Kenya for the Great Migration.',
+      },
+    ],
+    included: [
+      'Gorilla permits, secured well in advance',
+      'Helicopter transfers from Kigali',
+      'A luxury lodge facing the Virungas',
+      'A private guide, and porters on every trek',
+      'A second trek or golden monkey tracking',
+      'Extensions to Nyungwe, Akagera or Kenya',
+    ],
+    briefPrompt:
+      'Everyone trekking and their ages (the minimum is fifteen), fitness and any knee or back concerns, how many treks you want, and what you would like to join it to.',
+    image: '/media/experiences/gorillas.jpg',
+    imageAlt: 'A mountain gorilla looking up through forest leaves',
+    focus: '30% 60%',
+    image2: '/media/experiences/gorillas-2.jpg',
+    image2Alt: 'Morning mist over forested hills at sunrise',
+  },
+  {
+    slug: 'namibia-dunes',
+    name: 'Namibia Dune Adventure',
+    place: 'Namibia',
+    region: 'Africa',
+    tagline: 'The oldest desert on earth, by air, by buggy and on foot',
+    intro:
+      'The red dunes of Sossusvlei at first light, the Skeleton Coast from a light aircraft, and nights under some of the darkest skies on earth. A fly-in journey between remote desert lodges, a short flight from Cape Town.',
+    duration: 'Five to nine nights',
+    season: 'Usually best May to October: clear, cool days and cold desert nights.',
+    bases: ['Sossusvlei', 'NamibRand', 'Skeleton Coast', 'Damaraland', 'Swakopmund', 'Etosha'],
+    shape: [
+      {
+        when: 'Arrival',
+        title: 'Straight into the desert',
+        body: 'Met at the aircraft in Windhoek, or flown direct from Cape Town, then a light aircraft to a lodge on the edge of the dunes.',
+      },
+      {
+        when: 'First light',
+        title: 'Up the dunes before the heat',
+        body: 'Climb the red dunes of Sossusvlei at sunrise, then walk down into Deadvlei among the dead camel thorn trees.',
+      },
+      {
+        when: 'A full day',
+        title: 'Over and across the sand',
+        body: 'Quad bikes or dune buggies near Swakopmund, sandboarding, or a hot air balloon over the Namib at dawn.',
+      },
+      {
+        when: 'From the air',
+        title: 'The Skeleton Coast',
+        body: 'A light aircraft along the coast where the dunes run into the Atlantic, past shipwrecks and seal colonies.',
+      },
+      {
+        when: 'Every night',
+        title: 'Under the darkest skies',
+        body: 'Sleep out on a deck under the stars, with an astronomer to talk you through the southern sky.',
+      },
+    ],
+    included: [
+      'Light aircraft between every stop',
+      'A private guide and vehicle throughout',
+      'Remote desert lodges, fully catered',
+      'Balloon, quad bike and sandboarding days',
+      'Scenic flights over the dunes and the coast',
+      'An extension to Etosha or Cape Town',
+    ],
+    briefPrompt:
+      'How adventurous the group is, fitness for dune climbs, any interest in photography or flying, and whether you want wildlife at Etosha too.',
+    image: '/media/experiences/namibia.jpg',
+    imageAlt: 'The curved crest of a red dune, half in deep shadow, under a dark blue sky',
+    focus: '66% 50%',
+    image2: '/media/experiences/namibia-2.jpg',
+    image2Alt: 'A dead camel thorn tree in Deadvlei under a starry sky',
+  },
+  {
     slug: 'bali-spiritual-retreat',
     name: 'Bali Spiritual Retreat',
     place: 'Bali, Indonesia',
+    region: 'Islands',
     tagline: 'Temples, ritual and stillness in the hills above Ubud',
     intro:
       'A retreat shaped around you rather than a group timetable: a priest or healer for blessing ceremonies, a teacher for daily practice, and a private villa in the jungle to come back to.',
@@ -221,6 +394,7 @@ export const EXPERIENCES: Experience[] = [
     slug: 'maldives-escape',
     name: 'Maldives Escape',
     place: 'Maldives',
+    region: 'Islands',
     tagline: 'A seaplane, an atoll, and nothing at all to do',
     intro:
       'Over the water or on the sand, on a resort island or one entirely your own. We pick the atoll for the season, and the reef for what you want to see beneath it.',
@@ -274,6 +448,7 @@ export const EXPERIENCES: Experience[] = [
     slug: 'swiss-alps-skiing',
     name: 'Swiss Alps Skiing',
     place: 'Switzerland',
+    region: 'Snow and ice',
     tagline: 'A staffed chalet, a private guide and first tracks under the Matterhorn',
     intro:
       'A chalet with a chef and host in Zermatt, St. Moritz, Verbier or Gstaad, a guide who knows where the snow is, and a helicopter for the slopes the lifts do not reach.',
@@ -327,6 +502,7 @@ export const EXPERIENCES: Experience[] = [
     slug: 'arctic-expedition',
     name: 'Arctic Expedition',
     place: 'The High Arctic',
+    region: 'Snow and ice',
     tagline: 'Pack ice, polar bears and the midnight sun',
     intro:
       'On a small expedition ship or a private yacht, with polar guides and naturalists who have done this for decades. In winter it becomes a hunt for the northern lights.',

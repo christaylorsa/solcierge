@@ -1,13 +1,12 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { ExperienceGrid } from '@/components/experiences/ExperienceGrid'
+import { ExperienceBrowser } from '@/components/experiences/ExperienceBrowser'
 import { Section, SectionHead } from '@/components/site/Section'
-import { EXPERIENCES } from '@/lib/experiences'
 
 export const metadata: Metadata = {
   title: 'Experiences',
   description:
-    'Whole journeys planned end to end by the Solcierge desk: safari, Cape Town, Bali, the Maldives, the Swiss Alps and the Arctic. Price on request, settled in SOL or USDC.',
+    'Whole journeys planned end to end by the Solcierge desk: safari, Cape Town, the Great Migration, gorillas in Rwanda, the Namib dunes, Bali, the Maldives, the Swiss Alps and the Arctic. Price on request, settled in SOL or USDC.',
 }
 
 const HOW = [
@@ -35,7 +34,7 @@ export default function ExperiencesPage() {
           lede="Pick a place and a feeling. We plan everything in between, and settle it all in one payment. Price on request, because no two are the same."
         />
 
-        <ExperienceGrid experiences={EXPERIENCES} className="mt-16" />
+        <ExperienceBrowser />
       </Section>
 
       <Section tone="surface" className="border-y border-line">
