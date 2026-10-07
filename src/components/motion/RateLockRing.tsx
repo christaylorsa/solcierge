@@ -89,15 +89,6 @@ export function RateLockRing({
           stroke="rgb(var(--accent) / 0.12)"
           strokeWidth={STROKE}
         />
-        {/* Hairline inner rule, the detail that makes it read as an instrument. */}
-        <circle
-          cx={SIZE / 2}
-          cy={SIZE / 2}
-          r={RADIUS - 14}
-          fill="none"
-          stroke="rgb(var(--accent) / 0.07)"
-          strokeWidth={1}
-        />
         <circle
           className="lock-arc"
           cx={SIZE / 2}

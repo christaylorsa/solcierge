@@ -47,7 +47,7 @@ export function CryptoRails() {
           </p>
         </div>
 
-        <div className="mt-20 grid gap-16 lg:grid-cols-[minmax(0,1fr)_1.1fr] lg:items-center lg:gap-24">
+        <div className="mt-20 grid gap-16 lg:grid-cols-[minmax(0,1fr)_1.1fr] lg:items-start lg:gap-24">
           <Reveal className="flex flex-col items-center">
             <RateLockRing className="w-full max-w-[320px]" />
 
@@ -56,8 +56,19 @@ export function CryptoRails() {
               start this countdown. Inside the window the figure cannot move. Let it lapse and
               you get a fresh rate, never a surprise one.
             </p>
+          </Reveal>
 
-            <dl className="mt-10 w-full max-w-sm space-y-3 border border-line bg-bg p-6">
+          <Reveal>
+            <ul className="space-y-10">
+              {POINTS.map((point) => (
+                <li key={point.title} className="border-l border-line pl-6">
+                  <h3 className="display text-2xl text-ink">{point.title}</h3>
+                  <p className="mt-3 text-sm leading-relaxed text-muted">{point.body}</p>
+                </li>
+              ))}
+            </ul>
+
+            <dl className="mt-12 space-y-3 border border-line bg-bg/60 p-6 sm:ml-6">
               <Row label="Network">{publicEnv.cluster}</Row>
               <Row label="Accepted">SOL, USDC</Row>
               <Row label="USDC mint">
@@ -85,17 +96,6 @@ export function CryptoRails() {
                 )}
               </Row>
             </dl>
-          </Reveal>
-
-          <Reveal>
-            <ul className="space-y-10">
-              {POINTS.map((point) => (
-                <li key={point.title} className="border-l border-line pl-6">
-                  <h3 className="display text-2xl text-ink">{point.title}</h3>
-                  <p className="mt-3 text-sm leading-relaxed text-muted">{point.body}</p>
-                </li>
-              ))}
-            </ul>
           </Reveal>
         </div>
       </div>

@@ -432,6 +432,36 @@ select.field option {
 }
 
 /* ==========================================================================
+   Site-wide dither. Every dark gradient on the site (glows, scrims, vignettes)
+   spans only a few 8-bit levels, which the eye reads as concentric steps or
+   "onion rings". One still, per-pixel grain tile over the whole viewport breaks
+   those steps up. It never moves, because jittering grain over text is
+   distracting; it only breathes its opacity, slowly.
+   ========================================================================== */
+
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  /* Above everything, wallet modal included: it is pointer-transparent, and a
+     modal's own shadows band just the same. */
+  z-index: 2147483000;
+  pointer-events: none;
+  background-image: url('/textures/grain.png');
+  background-size: 192px 192px;
+  animation: grain-breathe 4.5s ease-in-out infinite alternate;
+}
+
+@keyframes grain-breathe {
+  from {
+    opacity: 0.7;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ==========================================================================
    Atmosphere: film grain and vignette.
    The grain steps rather than tweens, because real emulsion jumps between frames
    and a smooth tween reads as drifting dust. One tiling noise texture as a data
@@ -482,6 +512,10 @@ select.field option {
    Atmosphere: aurora. Two enormous, faint gold gradients drifting against each
    other. No blur filter: a radial gradient is already soft, and blurring a 46vw
    element is expensive to composite for no visual gain.
+
+   The site-wide dither (body::after) breaks up the 8-bit steps a gradient this
+   faint would otherwise draw. The layer also fades out towards the section's top
+   and bottom, so a blob never meets the next band as a hard horizontal crop.
    ========================================================================== */
 
 .aurora {
@@ -489,6 +523,8 @@ select.field option {
   inset: 0;
   overflow: hidden;
   pointer-events: none;
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 22%, #000 78%, transparent);
+  mask-image: linear-gradient(to bottom, transparent, #000 22%, #000 78%, transparent);
 }
 
 .aurora-blob {
@@ -496,7 +532,16 @@ select.field option {
   display: block;
   border-radius: 50%;
   opacity: 0.05;
-  background: radial-gradient(circle closest-side, rgb(var(--accent)), transparent);
+  /* Eased falloff rather than a straight ramp, so the edge has no visible rim. */
+  background: radial-gradient(
+    circle closest-side,
+    rgb(var(--accent)) 0%,
+    rgb(var(--accent) / 0.7) 25%,
+    rgb(var(--accent) / 0.38) 50%,
+    rgb(var(--accent) / 0.14) 72%,
+    rgb(var(--accent) / 0.03) 88%,
+    transparent 100%
+  );
   will-change: transform;
 }
 
@@ -967,7 +1012,8 @@ a[aria-disabled='true'] {
   }
 
   /* Gradients stay as depth, the drift stops. */
-  .aurora-blob {
+  .aurora-blob,
+  body::after {
     animation: none !important;
     will-change: auto;
   }
