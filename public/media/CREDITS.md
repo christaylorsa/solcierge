@@ -41,8 +41,6 @@ re-encoded once more locally to stay under 400KB. Largest file is under 450KB.
 | `experiences/great-migration-2.jpg` | https://images.unsplash.com/photo-1551802230-22c087b11df2 |
 | `experiences/gorillas.jpg` | https://images.unsplash.com/photo-1761204853161-f51581bc2f28 |
 | `experiences/gorillas-2.jpg` | https://images.unsplash.com/photo-1511284281977-10b7b4377cfc |
-| `experiences/namibia.jpg` | https://images.unsplash.com/photo-1505598872760-6090aa9ed603 |
-| `experiences/namibia-2.jpg` | https://images.unsplash.com/photo-1579885487896-abc1a9ebb77b |
 | `experiences/japan.jpg` | https://images.unsplash.com/photo-1718094985270-4978824bff3f |
 | `experiences/japan-2.jpg` | https://images.unsplash.com/photo-1705073021025-597e7f9f5488 |
 

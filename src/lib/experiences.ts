@@ -13,7 +13,6 @@ export const EXPERIENCE_SLUGS = [
   'cape-town',
   'great-migration-kenya',
   'gorilla-trekking-rwanda',
-  'namibia-dunes',
   'tokyo-kyoto',
   'bali-spiritual-retreat',
   'maldives-escape',
@@ -282,60 +281,6 @@ export const EXPERIENCES: Experience[] = [
     focus: '30% 60%',
     image2: '/media/experiences/gorillas-2.jpg',
     image2Alt: 'Morning mist over forested hills at sunrise',
-  },
-  {
-    slug: 'namibia-dunes',
-    name: 'Namibia Dune Adventure',
-    place: 'Namibia',
-    region: 'Africa',
-    tagline: 'The oldest desert on earth, by air, by buggy and on foot',
-    intro:
-      'The red dunes of Sossusvlei at first light, the Skeleton Coast from a light aircraft, and nights under some of the darkest skies on earth. A fly-in journey between remote desert lodges, a short flight from Cape Town.',
-    duration: 'Five to nine nights',
-    season: 'Usually best May to October: clear, cool days and cold desert nights.',
-    bases: ['Sossusvlei', 'NamibRand', 'Skeleton Coast', 'Damaraland', 'Swakopmund', 'Etosha'],
-    shape: [
-      {
-        when: 'Arrival',
-        title: 'Straight into the desert',
-        body: 'Met at the aircraft in Windhoek, or flown direct from Cape Town, then a light aircraft to a lodge on the edge of the dunes.',
-      },
-      {
-        when: 'First light',
-        title: 'Up the dunes before the heat',
-        body: 'Climb the red dunes of Sossusvlei at sunrise, then walk down into Deadvlei among the dead camel thorn trees.',
-      },
-      {
-        when: 'A full day',
-        title: 'Over and across the sand',
-        body: 'Quad bikes or dune buggies near Swakopmund, sandboarding, or a hot air balloon over the Namib at dawn.',
-      },
-      {
-        when: 'From the air',
-        title: 'The Skeleton Coast',
-        body: 'A light aircraft along the coast where the dunes run into the Atlantic, past shipwrecks and seal colonies.',
-      },
-      {
-        when: 'Every night',
-        title: 'Under the darkest skies',
-        body: 'Sleep out on a deck under the stars, with an astronomer to talk you through the southern sky.',
-      },
-    ],
-    included: [
-      'Light aircraft between every stop',
-      'A private guide and vehicle throughout',
-      'Remote desert lodges, fully catered',
-      'Balloon, quad bike and sandboarding days',
-      'Scenic flights over the dunes and the coast',
-      'An extension to Etosha or Cape Town',
-    ],
-    briefPrompt:
-      'How adventurous the group is, fitness for dune climbs, any interest in photography or flying, and whether you want wildlife at Etosha too.',
-    image: '/media/experiences/namibia.jpg',
-    imageAlt: 'The curved crest of a red dune, half in deep shadow, under a dark blue sky',
-    focus: '66% 50%',
-    image2: '/media/experiences/namibia-2.jpg',
-    image2Alt: 'A dead camel thorn tree in Deadvlei under a starry sky',
   },
   {
     slug: 'tokyo-kyoto',

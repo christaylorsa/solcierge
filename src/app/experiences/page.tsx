@@ -6,7 +6,7 @@ import { Section, SectionHead } from '@/components/site/Section'
 export const metadata: Metadata = {
   title: 'Experiences',
   description:
-    'Whole journeys planned end to end by the Solcierge desk: safari, Cape Town, the Great Migration, gorillas in Rwanda, the Namib dunes, Tokyo and Kyoto, Bali, the Maldives, the Swiss Alps and the Arctic. Price on request, settled in SOL or USDC.',
+    'Whole journeys planned end to end by the Solcierge desk: safari, Cape Town, the Great Migration, gorillas in Rwanda, Tokyo and Kyoto, Bali, the Maldives, the Swiss Alps and the Arctic. Price on request, settled in SOL or USDC.',
 }
 
 const HOW = [

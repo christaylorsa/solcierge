@@ -9,19 +9,19 @@ import { trailingSpan, type Experience } from '@/lib/experiences'
  * gesture as the category tiles (the `.card-*` rules in globals.css).
  *
  * The bottom row is always full: when the count does not divide into the columns,
- * the last card widens to fill the gap (see trailingSpan), at two columns and three.
+ * the last card widens to fill the gap (see trailingSpan), at two columns and three. Three a row from tablet width up.
  */
 export function ExperienceGrid({ experiences, className = '' }: { experiences: Experience[]; className?: string }) {
   const sm = trailingSpan(experiences.length, 2)
-  const lg = trailingSpan(experiences.length, 3)
+  const md = trailingSpan(experiences.length, 3)
 
   return (
-    <Stagger className={`grid gap-5 sm:grid-cols-2 lg:grid-cols-3 ${className}`}>
+    <Stagger className={`grid gap-5 sm:grid-cols-2 md:grid-cols-3 ${className}`}>
       {experiences.map((experience, index) => {
         const last = index === experiences.length - 1
         return (
-          <Tilt key={experience.slug} className={last ? SPAN[`${sm}-${lg}`] : ''} max={last && lg > 1 ? 2 : 4}>
-            <ExperienceCard experience={experience} shape={last ? SHAPE[`${sm}-${lg}`] : SHAPE['1-1']} />
+          <Tilt key={experience.slug} className={last ? SPAN[`${sm}-${md}`] : ''} max={last && md > 1 ? 2 : 4}>
+            <ExperienceCard experience={experience} shape={last ? SHAPE[`${sm}-${md}`] : SHAPE['1-1']} />
           </Tilt>
         )
       })}
@@ -36,19 +36,19 @@ export function ExperienceGrid({ experiences, className = '' }: { experiences: E
  */
 const SPAN: Record<string, string> = {
   '1-1': '',
-  '1-2': 'lg:col-span-2',
-  '1-3': 'lg:col-span-3',
-  '2-1': 'sm:col-span-2 lg:col-span-1',
+  '1-2': 'md:col-span-2',
+  '1-3': 'md:col-span-3',
+  '2-1': 'sm:col-span-2 md:col-span-1',
   '2-2': 'sm:col-span-2',
-  '2-3': 'sm:col-span-2 lg:col-span-3',
+  '2-3': 'sm:col-span-2 md:col-span-3',
 }
 const SHAPE: Record<string, string> = {
   '1-1': 'sm:aspect-[3/4]',
-  '1-2': 'sm:aspect-[3/4] lg:aspect-[3/2]',
-  '1-3': 'sm:aspect-[3/4] lg:aspect-[9/4]',
-  '2-1': 'sm:aspect-[3/2] lg:aspect-[3/4]',
+  '1-2': 'sm:aspect-[3/4] md:aspect-[3/2]',
+  '1-3': 'sm:aspect-[3/4] md:aspect-[9/4]',
+  '2-1': 'sm:aspect-[3/2] md:aspect-[3/4]',
   '2-2': 'sm:aspect-[3/2]',
-  '2-3': 'sm:aspect-[3/2] lg:aspect-[9/4]',
+  '2-3': 'sm:aspect-[3/2] md:aspect-[9/4]',
 }
 
 export function ExperienceCard({ experience, shape = SHAPE['1-1'] }: { experience: Experience; shape?: string }) {
