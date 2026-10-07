@@ -31,7 +31,16 @@ const nextConfig = {
     '/card/[code]': ['./assets/card/**'],
   },
   async headers() {
-    return [{ source: '/:path*', headers: securityHeaders }]
+    return [
+      { source: '/:path*', headers: securityHeaders },
+      // Photographs and video. Names are not content-hashed, so not immutable: a day
+      // fresh, then served from cache while revalidating for a week. A replaced photo
+      // shows within a day.
+      {
+        source: '/media/:path*',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=604800' }],
+      },
+    ]
   },
 }
 

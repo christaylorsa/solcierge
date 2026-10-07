@@ -43,7 +43,7 @@ export function ExperienceBrowser() {
       </div>
 
       {/* Keyed on the filter so the cards stagger in again rather than popping. */}
-      <ExperienceGrid key={region ?? 'all'} experiences={shown} className="mt-10" />
+      <ExperienceGrid key={region ?? 'all'} experiences={shown} className="mt-10" eager={3} />
     </div>
   )
 }

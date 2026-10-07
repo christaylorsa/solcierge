@@ -3,6 +3,7 @@ import { Stagger } from '@/components/motion/Reveal'
 import { Eyebrow, MaskedHeading } from '@/components/motion/MaskedHeading'
 import { Tilt } from '@/components/motion/Magnetic'
 import { Aurora } from '@/components/motion/Aurora'
+import { Photo } from '@/components/site/Photo'
 import { Section } from '@/components/site/Section'
 import { CATEGORIES } from '@/lib/categories'
 
@@ -52,13 +53,14 @@ export function CategoryTiles() {
                     isWide(index) ? 'aspect-[3/2] lg:aspect-[2.4/1]' : 'aspect-[3/2]'
                   }`}
                 >
-                  <img
+                  <Photo
                     src={category.image}
                     alt={category.imageAlt}
-                    width={1600}
-                    height={1067}
-                    loading="lazy"
-                    decoding="async"
+                    sizes={
+                      isWide(index)
+                        ? '(min-width: 1280px) 780px, (min-width: 1024px) 62vw, (min-width: 640px) 48vw, 100vw'
+                        : '(min-width: 1280px) 380px, (min-width: 1024px) 31vw, (min-width: 640px) 48vw, 100vw'
+                    }
                     className="photo card-media h-full w-full object-cover"
                   />
                   <div

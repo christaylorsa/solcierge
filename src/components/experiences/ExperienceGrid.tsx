@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { Stagger } from '@/components/motion/Reveal'
 import { Tilt } from '@/components/motion/Magnetic'
+import { Photo } from '@/components/site/Photo'
 import { trailingSpan, type Experience } from '@/lib/experiences'
 
 /**
@@ -11,7 +12,16 @@ import { trailingSpan, type Experience } from '@/lib/experiences'
  * The bottom row is always full: when the count does not divide into the columns,
  * the last card widens to fill the gap (see trailingSpan), at two columns and three. Three a row from tablet width up.
  */
-export function ExperienceGrid({ experiences, className = '' }: { experiences: Experience[]; className?: string }) {
+export function ExperienceGrid({
+  experiences,
+  className = '',
+  eager = 0,
+}: {
+  experiences: Experience[]
+  className?: string
+  /** How many cards are above the fold where this grid is used: they load first. */
+  eager?: number
+}) {
   const sm = trailingSpan(experiences.length, 2)
   const md = trailingSpan(experiences.length, 3)
 
@@ -21,7 +31,14 @@ export function ExperienceGrid({ experiences, className = '' }: { experiences: E
         const last = index === experiences.length - 1
         return (
           <Tilt key={experience.slug} className={last ? SPAN[`${sm}-${md}`] : ''} max={last && md > 1 ? 2 : 4}>
-            <ExperienceCard experience={experience} shape={last ? SHAPE[`${sm}-${md}`] : SHAPE['1-1']} />
+            <ExperienceCard
+              experience={experience}
+              shape={last ? SHAPE[`${sm}-${md}`] : SHAPE['1-1']}
+              // Full frame only when wide at three a row; a card wide only on small tablets
+              // keeps the portrait crop, which still covers its box.
+              wide={last && md > 1}
+              eager={index < eager}
+            />
           </Tilt>
         )
       })}
@@ -51,21 +68,38 @@ const SHAPE: Record<string, string> = {
   '2-3': 'sm:aspect-[3/2] md:aspect-[9/4]',
 }
 
-export function ExperienceCard({ experience, shape = SHAPE['1-1'] }: { experience: Experience; shape?: string }) {
+// Card widths: three a row from 768px (380px at most), two from 640px, one below.
+const CARD_SIZES = '(min-width: 1280px) 380px, (min-width: 768px) 31vw, (min-width: 640px) 48vw, 100vw'
+const WIDE_SIZES = '(min-width: 1280px) 1180px, 100vw'
+
+export function ExperienceCard({
+  experience,
+  shape = SHAPE['1-1'],
+  wide = false,
+  eager = false,
+}: {
+  experience: Experience
+  shape?: string
+  /** Spans more than one column somewhere: needs the full frame, not the portrait crop. */
+  wide?: boolean
+  eager?: boolean
+}) {
   return (
     <Link
       href={`/experiences/${experience.slug}`}
       className={`card group relative isolate flex aspect-[4/5] flex-col justify-end overflow-hidden border border-line bg-bg ${shape}`}
     >
-      <img
+      <Photo
         src={experience.image}
         alt={experience.imageAlt}
-        width={1920}
-        height={1200}
-        loading="lazy"
-        decoding="async"
+        crop={wide ? 'landscape' : 'portrait'}
+        masterWidth={1920}
+        sizes={wide ? WIDE_SIZES : CARD_SIZES}
+        loading={eager ? 'eager' : 'lazy'}
+        fetchPriority={eager ? 'high' : undefined}
         className="photo card-media absolute inset-0 -z-10 h-full w-full object-cover"
-        style={{ objectPosition: experience.focus }}
+        // The portrait copy is already cropped on the focus point.
+        style={wide ? { objectPosition: experience.focus } : undefined}
       />
       <div className="absolute inset-0 -z-10 bg-gradient-to-t from-bg via-bg/65 to-bg/0" aria-hidden="true" />
       <div

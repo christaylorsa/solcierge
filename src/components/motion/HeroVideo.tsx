@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { Photo } from '@/components/site/Photo'
 import { useMotionAllowed } from '@/hooks/useMotionAllowed'
 
 /**
@@ -65,11 +66,12 @@ export function HeroVideo({ className = '' }: { className?: string }) {
 
   return (
     <div className={`absolute inset-0 ${className}`} aria-hidden="true">
-      <img
+      {/* Full screen, and on a phone the frame is tall, so it needs more than its width. */}
+      <Photo
         src="/media/hero-poster.jpg"
         alt=""
-        width={1600}
-        height={900}
+        sizes="(max-width: 767px) 200vw, 100vw"
+        loading="eager"
         fetchPriority="high"
         className="absolute inset-0 h-full w-full object-cover"
       />

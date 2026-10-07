@@ -35,7 +35,7 @@ export function ProfileHero({
 
   return (
     <section className="relative isolate overflow-hidden border-b border-line">
-      <ParallaxPhoto src="/media/hero-1.jpg" position="72% 62%" className="opacity-45" />
+      <ParallaxPhoto src="/media/hero-1.jpg" position="72% 62%" className="opacity-45" masterWidth={1920} />
       {/* Dark column for the type on the left, the frame tied into the page below. */}
       <div
         aria-hidden="true"

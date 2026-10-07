@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { Reveal } from '@/components/motion/Reveal'
 import { RequestForm } from '@/components/request/RequestForm'
+import { Photo } from '@/components/site/Photo'
 import { AIR_CHARTER_BROKER_STATEMENT, CATEGORIES, CATEGORY_BY_SLUG } from '@/lib/categories'
 import { isCategorySlug } from '@/lib/types'
 
@@ -36,11 +37,11 @@ export default async function CategoryRequestPage({
     <>
       {/* Banner. One move: the copy fades up over a still image. */}
       <div className="relative isolate overflow-hidden border-b border-line">
-        <img
+        <Photo
           src={category.image}
           alt={category.imageAlt}
-          width={1600}
-          height={1067}
+          sizes="100vw"
+          loading="eager"
           fetchPriority="high"
           className="photo absolute inset-0 h-full w-full object-cover opacity-40"
         />

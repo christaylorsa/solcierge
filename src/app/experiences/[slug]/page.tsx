@@ -7,6 +7,7 @@ import { Eyebrow, MaskedHeading } from '@/components/motion/MaskedHeading'
 import { ParallaxPhoto } from '@/components/motion/ParallaxPhoto'
 import { Reveal, SectionDivider } from '@/components/motion/Reveal'
 import { RequestForm } from '@/components/request/RequestForm'
+import { Photo } from '@/components/site/Photo'
 import { Section } from '@/components/site/Section'
 import { EXPERIENCES_CATEGORY } from '@/lib/categories'
 import { EXPERIENCES, EXPERIENCE_BY_SLUG, isExperienceSlug, otherExperiences } from '@/lib/experiences'
@@ -40,14 +41,17 @@ export default async function ExperiencePage({ params }: { params: Promise<{ slu
       */}
       <div className="relative isolate overflow-hidden border-b border-line bg-bg">
         <div className="absolute inset-0 lg:left-[36%] lg:[mask-image:linear-gradient(to_right,transparent,#000_45%)]">
-          <img
+          {/* Phones get the 3:4 crop, already framed on the subject; desktop the full frame. */}
+          <Photo
             src={experience.image}
             alt={experience.imageAlt}
-            width={1920}
-            height={1200}
+            masterWidth={1920}
+            sizes="80vw"
+            narrow={{ media: '(max-width: 1023px)', sizes: '140vw' }}
+            loading="eager"
             fetchPriority="high"
-            className="photo h-full w-full object-cover opacity-75 lg:opacity-95"
-            style={{ objectPosition: experience.focus }}
+            className="photo h-full w-full object-cover opacity-75 lg:opacity-95 lg:[object-position:var(--focus)]"
+            style={{ ['--focus' as string]: experience.focus }}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-bg via-bg/60 to-bg/10 lg:via-transparent lg:to-transparent" aria-hidden="true" />
           <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-bg/80 to-transparent" aria-hidden="true" />
