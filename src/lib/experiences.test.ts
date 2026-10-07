@@ -12,6 +12,7 @@ import {
   experienceName,
   isExperienceSlug,
   otherExperiences,
+  trailingSpan,
 } from './experiences.ts'
 
 const publicFile = (path: string) => new URL(`../../public${path}`, import.meta.url)
@@ -56,5 +57,21 @@ test('other experiences never include the one being viewed', () => {
     assert.equal(others.length, 3)
     assert.ok(!others.some((other) => other.slug === experience.slug), experience.slug)
     assert.equal(new Set(others.map((other) => other.slug)).size, 3)
+  }
+})
+
+test('the last card fills whatever the bottom row leaves', () => {
+  // Two columns: an odd count stretches the last card across both.
+  assert.equal(trailingSpan(10, 2), 1)
+  assert.equal(trailingSpan(9, 2), 2)
+  // Three columns: one left over takes the row, two left over share it 1 + 2.
+  assert.equal(trailingSpan(9, 3), 1)
+  assert.equal(trailingSpan(10, 3), 3)
+  assert.equal(trailingSpan(5, 3), 2)
+  for (const columns of [2, 3]) {
+    for (let count = 1; count <= 12; count++) {
+      const used = (count - 1) + trailingSpan(count, columns)
+      assert.equal(used % columns, 0, `${count} cards in ${columns} columns leave no gap`)
+    }
   }
 })

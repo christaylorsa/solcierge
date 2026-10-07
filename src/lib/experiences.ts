@@ -14,6 +14,7 @@ export const EXPERIENCE_SLUGS = [
   'great-migration-kenya',
   'gorilla-trekking-rwanda',
   'namibia-dunes',
+  'tokyo-kyoto',
   'bali-spiritual-retreat',
   'maldives-escape',
   'swiss-alps-skiing',
@@ -22,7 +23,7 @@ export const EXPERIENCE_SLUGS = [
 export type ExperienceSlug = (typeof EXPERIENCE_SLUGS)[number]
 
 /** For browsing on /experiences. Written as shown on the filter. */
-export const EXPERIENCE_REGIONS = ['Africa', 'Islands', 'Snow and ice'] as const
+export const EXPERIENCE_REGIONS = ['Africa', 'Asia', 'Snow and ice'] as const
 export type ExperienceRegion = (typeof EXPERIENCE_REGIONS)[number]
 
 export type ExperienceBeat = {
@@ -337,10 +338,64 @@ export const EXPERIENCES: Experience[] = [
     image2Alt: 'A dead camel thorn tree in Deadvlei under a starry sky',
   },
   {
+    slug: 'tokyo-kyoto',
+    name: 'Tokyo & Kyoto',
+    place: 'Japan',
+    region: 'Asia',
+    tagline: 'Counter seats, private temples, and the bullet train between them',
+    intro:
+      'The sushi counters that rarely take strangers, temple gardens opened before the crowds, and an evening with a geiko in Gion. Tokyo\u2019s energy, then Kyoto\u2019s quiet, with a guide who opens doors in both.',
+    duration: 'Seven to twelve nights',
+    season: 'Usually best late March to early April for the cherry blossom, and November for the autumn colour.',
+    bases: ['Tokyo', 'Kyoto', 'Hakone', 'Osaka', 'Naoshima', 'Niseko'],
+    shape: [
+      {
+        when: 'Arrival',
+        title: 'Haneda, then the city',
+        body: 'Met at the aircraft and driven into Tokyo, to a suite high above the city with the skyline laid out at night.',
+      },
+      {
+        when: 'In Tokyo',
+        title: 'The counters',
+        body: 'Omakase at the counters that are hardest to book, and a cocktail bar of eight seats behind an unmarked door.',
+      },
+      {
+        when: 'Between the cities',
+        title: 'Hakone and the bullet train',
+        body: 'A night at a ryokan with a private onsen and a kaiseki dinner, Mount Fuji on a clear morning, then the Green Car to Kyoto.',
+      },
+      {
+        when: 'In Kyoto',
+        title: 'Temples before the crowds',
+        body: 'Gardens and temples opened early with a private guide, a tea ceremony, and an evening with a geiko and maiko in Gion.',
+      },
+      {
+        when: 'Your way',
+        title: 'Craft, art or powder',
+        body: 'A knife maker or a lacquer studio, a day on the art island of Naoshima, or a few days of powder in Niseko in winter.',
+      },
+    ],
+    included: [
+      'Suites in Tokyo and Kyoto, and a ryokan night',
+      'A private driver and bilingual guide throughout',
+      'Reservations at the hardest counters',
+      'Shinkansen and helicopter transfers',
+      'A tea ceremony, a geiko evening and craft visits',
+      'Extensions to Naoshima, Niseko or Osaka',
+    ],
+    briefPrompt:
+      'What you love to eat and drink, the pace you like, whether you want tradition, design or nightlife, and any season you are set on.',
+    image: '/media/experiences/japan.jpg',
+    imageAlt: 'A five-storey pagoda in Kyoto lit gold against the night sky',
+    focus: '45% 40%',
+    image2: '/media/experiences/japan-2.jpg',
+    image2Alt: 'Tokyo Tower lit orange above the city at night',
+  },
+  {
     slug: 'bali-spiritual-retreat',
     name: 'Bali Spiritual Retreat',
     place: 'Bali, Indonesia',
-    region: 'Islands',
+    region: 'Asia',
     tagline: 'Temples, ritual and stillness in the hills above Ubud',
     intro:
       'A retreat shaped around you rather than a group timetable: a priest or healer for blessing ceremonies, a teacher for daily practice, and a private villa in the jungle to come back to.',
@@ -394,7 +449,7 @@ export const EXPERIENCES: Experience[] = [
     slug: 'maldives-escape',
     name: 'Maldives Escape',
     place: 'Maldives',
-    region: 'Islands',
+    region: 'Asia',
     tagline: 'A seaplane, an atoll, and nothing at all to do',
     intro:
       'Over the water or on the sand, on a resort island or one entirely your own. We pick the atoll for the season, and the reef for what you want to see beneath it.',
@@ -572,4 +627,14 @@ export function otherExperiences(slug: ExperienceSlug, count = 3): Experience[] 
   return Array.from({ length: Math.min(count, EXPERIENCES.length - 1) }, (_, i) =>
     EXPERIENCES[(start + 1 + i) % EXPERIENCES.length],
   )
+}
+
+/**
+ * How many columns the last card should span so the bottom row of a grid is always
+ * full: a lone card takes the whole row, and with two left in a row of three, the
+ * second takes the remaining two. Every other card spans one.
+ */
+export function trailingSpan(count: number, columns: number): number {
+  const left = count % columns
+  return left === 0 ? 1 : columns - left + 1
 }
