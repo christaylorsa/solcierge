@@ -10,3 +10,10 @@ node_modules
 .claude
 *.tsbuildinfo
 .next-preview
+# Working files that live beside the code but are not part of the site
+Brand/
+Hype Video/
+Videos for Colloseum/
+legal-review/
+/*.pdf
+/image-*.png
