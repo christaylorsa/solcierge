@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { Magnetic, Tilt } from '@/components/motion/Magnetic'
+import { Eyebrow, MaskedHeading } from '@/components/motion/MaskedHeading'
 import { usd } from '@/lib/format'
 import { CODE_MAX, displayCode, referralUrl, shareOnXUrl } from '@/lib/referrals'
 import type { ReferralSummary } from '@/lib/data'
@@ -75,8 +77,11 @@ export function Introductions({
     <div>
       <div className="flex flex-wrap items-end justify-between gap-6">
         <div className="max-w-xl">
-          <p className="eyebrow">Introductions</p>
-          <h2 className="display mt-4 text-[clamp(2rem,4vw,3rem)] text-ink">Bring someone with you</h2>
+          <Eyebrow>Introductions</Eyebrow>
+          <MaskedHeading
+            lines={['Bring someone', <span key="i" className="italic text-muted">with you</span>]}
+            className="display mt-5 text-[clamp(2.25rem,4.5vw,3.5rem)] text-ink"
+          />
         </div>
         <p className="max-w-sm text-sm leading-relaxed text-muted">
           Share your card. When someone you introduce settles a booking, you share in it, paid by the desk.
@@ -87,7 +92,12 @@ export function Introductions({
         {/* The card. min-w-0 on both columns: grid items otherwise refuse to shrink below
             the input's intrinsic width and push a phone layout sideways. */}
         <div className="min-w-0">
-          <div className="relative overflow-hidden border border-line bg-surface" style={{ aspectRatio: '1200 / 630' }}>
+          <Tilt max={5} className="relative">
+          <div aria-hidden="true" className="mcard-glow" />
+          <div
+            className="relative overflow-hidden border border-accent/25 bg-surface shadow-[0_40px_80px_-40px_rgb(0_0_0_/_0.9)]"
+            style={{ aspectRatio: '1200 / 630' }}
+          >
             {!loaded ? <div aria-hidden="true" className="absolute inset-0 animate-pulse bg-raised/60" /> : null}
             <img
               key={cardSrc}
@@ -98,12 +108,16 @@ export function Introductions({
               onLoad={() => setLoaded(true)}
               className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ease ${loaded ? 'opacity-100' : 'opacity-0'}`}
             />
+            <div className="mcard-sweep" aria-hidden="true" key={`sweep-${cardSrc}`} />
           </div>
+          </Tilt>
 
-          <div className="mt-5 flex flex-wrap items-center gap-3">
-            <a href={shareOnXUrl(siteUrl, code)} target="_blank" rel="noreferrer noopener" className="btn btn-primary">
-              Share on X
-            </a>
+          <div className="mt-8 flex flex-wrap items-center gap-3">
+            <Magnetic>
+              <a href={shareOnXUrl(siteUrl, code)} target="_blank" rel="noreferrer noopener" className="btn btn-primary">
+                Share on X
+              </a>
+            </Magnetic>
             <button type="button" onClick={() => void copy()} className="btn btn-ghost">
               {copied ? 'Link copied' : 'Copy link'}
             </button>

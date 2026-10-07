@@ -1,34 +1,42 @@
+import { MembershipCard } from './MembershipCard'
+import { Eyebrow, MaskedHeading } from '@/components/motion/MaskedHeading'
 import { Reveal } from '@/components/motion/Reveal'
 import { usd } from '@/lib/format'
 import { TIERS, type Standing, type Tier } from '@/lib/tiers'
 
 /**
- * The three tiers side by side, each with its threshold and what is left to reach it.
- * No progress bars, on purpose: a bar turns a membership into a loyalty scheme. The
- * gap is stated as a plain figure on each tier instead.
+ * The three tiers side by side, each shown as the card it gives you, with its
+ * threshold and what is left to reach it. No progress bars, on purpose: a bar turns
+ * a membership into a loyalty scheme. Tiers not yet reached show their card dimmed,
+ * so the next one is something to look at, not a number to chase.
  */
 export function TierLadder({ standing }: { standing: Standing }) {
   const currentIndex = TIERS.indexOf(standing.tier)
 
   return (
     <div>
-      <div className="flex flex-wrap items-end justify-between gap-6">
+      <div className="flex flex-wrap items-end justify-between gap-8">
         <div className="max-w-xl">
-          <p className="eyebrow">Membership</p>
-          <h2 className="display mt-4 text-[clamp(2rem,4vw,3rem)] text-ink">Three tiers, earned on what you book</h2>
+          <Eyebrow>Membership</Eyebrow>
+          <MaskedHeading
+            lines={['Three cards,', <span key="i" className="italic text-muted">earned on what you book</span>]}
+            className="display mt-5 text-[clamp(2.25rem,4.5vw,3.5rem)] text-ink"
+          />
         </div>
-        <p className="max-w-sm text-sm leading-relaxed text-muted">{summary(standing)}</p>
+        <Reveal>
+          <p className="max-w-sm text-sm leading-relaxed text-muted">{summary(standing)}</p>
+        </Reveal>
       </div>
 
-      <ol className="mt-10 grid divide-y divide-line border border-line md:grid-cols-3 md:divide-x md:divide-y-0">
+      <ol className="mt-14 grid divide-y divide-line border border-line md:grid-cols-3 md:divide-x md:divide-y-0">
         {TIERS.map((tier, index) => (
           <Reveal as="li" key={tier.key} delayIndex={index} className="flex">
-            <TierCard tier={tier} state={stateOf(index, currentIndex)} spend={standing.spend} />
+            <TierColumn tier={tier} state={stateOf(index, currentIndex)} spend={standing.spend} />
           </Reveal>
         ))}
       </ol>
 
-      <p className="mt-4 text-xs leading-relaxed text-faint">
+      <p className="mt-5 text-xs leading-relaxed text-faint">
         Counts every booking you have settled with us, at the USD quote. Cancelled and refunded bookings do not count.
       </p>
     </div>
@@ -43,38 +51,36 @@ function stateOf(index: number, current: number): State {
   return 'ahead'
 }
 
-function TierCard({ tier, state, spend }: { tier: Tier; state: State; spend: number }) {
+function TierColumn({ tier, state, spend }: { tier: Tier; state: State; spend: number }) {
   const current = state === 'current'
   const remaining = Math.max(0, tier.from - spend)
 
   return (
-    <div className={`relative flex w-full flex-col p-7 sm:p-8 ${current ? 'bg-raised' : 'bg-bg'}`}>
+    <div className={`relative flex w-full flex-col p-7 sm:p-9 ${current ? 'bg-raised' : 'bg-bg'}`}>
       {current ? <span aria-hidden="true" className="absolute inset-x-0 top-0 h-px bg-accent" /> : null}
 
-      <div className="flex items-start justify-between gap-4">
-        <span
-          className={`display text-6xl leading-none ${current ? 'text-accent' : state === 'reached' ? 'text-accent/45' : 'text-accent/20'}`}
-          aria-hidden="true"
-        >
-          {tier.numeral}
-        </span>
+      <div className="flex items-center justify-between gap-4">
+        <span className="text-[0.625rem] tracking-label uppercase text-faint">Tier {tier.numeral}</span>
         <StateLabel state={state} />
       </div>
 
-      <p className={`display mt-10 text-4xl ${state === 'ahead' ? 'text-muted' : 'text-ink'}`}>{tier.name}</p>
+      <div className="relative mx-auto mt-9 w-full max-w-[300px]">
+        {current && tier.key !== 'member' ? <div className="mcard-glow" aria-hidden="true" /> : null}
+        <MembershipCard tier={tier} locked={state === 'ahead'} />
+      </div>
+
+      <p className={`display mt-11 text-4xl ${state === 'ahead' ? 'text-muted' : 'text-ink'}`}>{tier.name}</p>
       <p className="mt-2 text-sm leading-relaxed text-faint">{tier.line}</p>
 
       <div className="mt-auto pt-10">
         <div className="border-t border-line pt-6">
-        <p className="text-[0.6875rem] tracking-label uppercase text-faint">Opens at</p>
-        <p className="display mt-2 text-3xl text-ink lining-nums">{tier.from === 0 ? 'Your first request' : usd(tier.from)}</p>
-        <p className={`mt-3 text-sm ${state === 'ahead' ? 'text-accent-soft' : 'text-faint'}`}>
-          {state === 'ahead'
-            ? `${usd(remaining)} to go`
-            : state === 'current'
-              ? 'Where you are now'
-              : 'Reached'}
-        </p>
+          <p className="text-[0.625rem] tracking-label uppercase text-faint">Opens at</p>
+          <p className="display mt-2 text-3xl text-ink lining-nums">
+            {tier.from === 0 ? 'Your first request' : usd(tier.from)}
+          </p>
+          <p className={`mt-3 text-sm ${state === 'ahead' ? 'text-accent-soft' : 'text-faint'}`}>
+            {state === 'ahead' ? `${usd(remaining)} to go` : state === 'current' ? 'Where you are now' : 'Reached'}
+          </p>
         </div>
       </div>
     </div>
@@ -94,11 +100,12 @@ function StateLabel({ state }: { state: State }) {
     return <span className="text-[0.625rem] tracking-label uppercase text-faint">Reached</span>
   }
   return (
-    <span className="text-faint" aria-label="Not yet reached">
-      <svg width="14" height="16" viewBox="0 0 14 16" fill="none" aria-hidden="true">
+    <span className="inline-flex items-center gap-2 text-[0.625rem] tracking-label uppercase text-faint">
+      <svg width="11" height="13" viewBox="0 0 14 16" fill="none" aria-hidden="true">
         <rect x="1.5" y="7" width="11" height="8" rx="1" stroke="currentColor" />
         <path d="M4 7V4.5a3 3 0 0 1 6 0V7" stroke="currentColor" />
       </svg>
+      Locked
     </span>
   )
 }
