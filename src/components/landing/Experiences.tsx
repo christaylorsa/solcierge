@@ -3,7 +3,7 @@ import { Eyebrow, MaskedHeading } from '@/components/motion/MaskedHeading'
 import { Reveal } from '@/components/motion/Reveal'
 import { ExperienceGrid } from '@/components/experiences/ExperienceGrid'
 import { Section } from '@/components/site/Section'
-import { EXPERIENCES } from '@/lib/experiences'
+import { EXPERIENCES, FEATURED_EXPERIENCES } from '@/lib/experiences'
 
 /** Whole journeys, after the single-service tiles: the same desk, planning everything. */
 export function Experiences() {
@@ -25,15 +25,19 @@ export function Experiences() {
         </div>
         <Reveal delayIndex={3}>
           <Link href="/experiences" className="link-underline text-sm text-muted">
-            All experiences
+            All {EXPERIENCES.length} experiences
           </Link>
         </Reveal>
       </div>
 
-      <ExperienceGrid experiences={EXPERIENCES} className="mt-16" />
+      <ExperienceGrid experiences={FEATURED_EXPERIENCES} className="mt-16" />
 
       <p className="mt-10 text-xs leading-relaxed text-faint">
-        Price on request. Every experience is built around your dates, your group and your taste.
+        Price on request. Every experience is built around your dates, your group and your taste.{' '}
+        <Link href="/experiences" className="link-underline text-muted">
+          See all {EXPERIENCES.length}, across Africa, Europe and the UK, Asia and the Americas
+        </Link>
+        .
       </p>
     </Section>
   )

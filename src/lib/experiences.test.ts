@@ -8,7 +8,10 @@ import { existsSync } from 'node:fs'
 import test from 'node:test'
 import {
   EXPERIENCES,
+  EXPERIENCE_REGIONS,
   EXPERIENCE_SLUGS,
+  FEATURED_EXPERIENCES,
+  experiencesIn,
   experienceName,
   isExperienceSlug,
   otherExperiences,
@@ -51,13 +54,24 @@ test('names resolve only for real experiences', () => {
   assert.equal(isExperienceSlug(42), false)
 })
 
-test('other experiences never include the one being viewed', () => {
+test('other experiences come from the same region and never repeat the one viewed', () => {
   for (const experience of EXPERIENCES) {
     const others = otherExperiences(experience.slug)
     assert.equal(others.length, 3)
     assert.ok(!others.some((other) => other.slug === experience.slug), experience.slug)
     assert.equal(new Set(others.map((other) => other.slug)).size, 3)
+    assert.ok(others.every((other) => other.region === experience.region), experience.slug)
   }
+})
+
+test('everything comes in rows of three', () => {
+  // The grid is three a row: every region, the full list and the home page six.
+  for (const region of EXPERIENCE_REGIONS) {
+    const count = experiencesIn(region).length
+    assert.ok(count > 0 && count % 3 === 0, `${region} has ${count}, not a multiple of three`)
+  }
+  assert.equal(EXPERIENCES.length % 3, 0)
+  assert.equal(FEATURED_EXPERIENCES.length, 6)
 })
 
 test('the last card fills whatever the bottom row leaves', () => {

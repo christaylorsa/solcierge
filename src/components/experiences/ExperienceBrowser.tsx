@@ -2,20 +2,19 @@
 
 import { useState } from 'react'
 import { ExperienceGrid } from './ExperienceGrid'
-import { EXPERIENCES, EXPERIENCE_REGIONS, type ExperienceRegion } from '@/lib/experiences'
+import { EXPERIENCES, EXPERIENCE_REGIONS, experiencesIn, type ExperienceRegion } from '@/lib/experiences'
 
-/** Every experience on one page, with a region filter for browsing. */
+/**
+ * Every experience on one page. "All" shows each region under its own heading, in
+ * rows of three; a region filter shows just that region.
+ */
 export function ExperienceBrowser() {
   const [region, setRegion] = useState<ExperienceRegion | null>(null)
-  const shown = region ? EXPERIENCES.filter((experience) => experience.region === region) : EXPERIENCES
+  const shown = region ? [region] : [...EXPERIENCE_REGIONS]
 
   const options: { label: string; value: ExperienceRegion | null; count: number }[] = [
     { label: 'All', value: null, count: EXPERIENCES.length },
-    ...EXPERIENCE_REGIONS.map((value) => ({
-      label: value,
-      value,
-      count: EXPERIENCES.filter((experience) => experience.region === value).length,
-    })),
+    ...EXPERIENCE_REGIONS.map((value) => ({ label: value, value, count: experiencesIn(value).length })),
   ]
 
   return (
@@ -43,7 +42,19 @@ export function ExperienceBrowser() {
       </div>
 
       {/* Keyed on the filter so the cards stagger in again rather than popping. */}
-      <ExperienceGrid key={region ?? 'all'} experiences={shown} className="mt-10" eager={3} />
+      <div key={region ?? 'all'} className="mt-12 space-y-20">
+        {shown.map((name, index) => (
+          <section key={name} aria-labelledby={`region-${index}`}>
+            <div className="flex items-baseline justify-between gap-6 border-b border-line pb-4">
+              <h2 id={`region-${index}`} className="display text-[clamp(1.75rem,3.5vw,2.5rem)] text-ink">
+                {name}
+              </h2>
+              <p className="text-xs tracking-label uppercase text-faint">{experiencesIn(name).length} experiences</p>
+            </div>
+            <ExperienceGrid experiences={experiencesIn(name)} className="mt-8" eager={index === 0 ? 3 : 0} />
+          </section>
+        ))}
+      </div>
     </div>
   )
 }
