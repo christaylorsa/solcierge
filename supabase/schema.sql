@@ -217,6 +217,35 @@ create unique index if not exists users_telegram_link_code_key
 create index if not exists users_telegram_chat_idx
   on public.users (telegram_chat_id) where telegram_chat_id is not null;
 
+-- --- connected X account -------------------------------------------------------
+-- Public profile fields only. No X token is ever stored: the app reads the profile
+-- once and revokes the token straight away.
+alter table public.users add column if not exists x_user_id    text;
+alter table public.users add column if not exists x_username   text;
+alter table public.users add column if not exists x_name       text;
+alter table public.users add column if not exists x_avatar_url text;
+alter table public.users add column if not exists x_linked_at  timestamptz;
+
+-- One X account belongs to one member.
+create unique index if not exists users_x_user_id_key
+  on public.users (x_user_id) where x_user_id is not null;
+
+-- --- referrals -----------------------------------------------------------------
+-- referral_code is stored lowercase. referred_by is set once, when the member's
+-- account is created from a share link or when they type a code before their first
+-- settled booking, and never changes after that.
+alter table public.users add column if not exists referral_code text;
+alter table public.users add column if not exists referred_by   uuid references public.users (id) on delete set null;
+alter table public.users add column if not exists referred_at   timestamptz;
+
+create unique index if not exists users_referral_code_key
+  on public.users (lower(referral_code)) where referral_code is not null;
+create index if not exists users_referred_by_idx
+  on public.users (referred_by) where referred_by is not null;
+
+alter table public.users drop constraint if exists users_not_self_referred;
+alter table public.users add constraint users_not_self_referred check (referred_by is null or referred_by <> id);
+
 -- --- passenger manifests (flights) ------------------------------------------
 
 -- One manifest per booking. The passengers (name, date of birth, nationality,
@@ -300,7 +329,7 @@ grant all on public.users, public.booking_requests, public.quotes,
 --
 --   select public.anonymize_user('<user id>');
 --
--- That clears the member's profile, wallet and Telegram link, deletes their
+-- That clears the member's profile, wallet, Telegram and X links and referral code, deletes their
 -- passenger manifests, and strips the free-text brief and typed contact details
 -- from their requests, while bookings, quotes and payments remain. Uploaded documents are not touched: Postgres cannot
 -- delete Storage files, so remove the booking's folder in the Storage dashboard.
@@ -327,6 +356,8 @@ begin
          contact_email = null, phone = null,
          telegram_chat_id = null, telegram_linked_at = null,
          telegram_link_code = null, telegram_link_expires_at = null,
+         x_user_id = null, x_username = null, x_name = null, x_avatar_url = null, x_linked_at = null,
+         referral_code = null,
          anonymized_at = now()
    where id = target;
 

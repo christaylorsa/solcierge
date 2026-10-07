@@ -25,6 +25,11 @@ const nextConfig = {
   // Keeping them external to the server bundle avoids resolution noise at build time.
   serverExternalPackages: ['@solana/web3.js'],
   poweredByHeader: false,
+  // The share card reads its fonts and grain from disk at request time, which the
+  // bundler cannot see, so they are traced into the function explicitly.
+  outputFileTracingIncludes: {
+    '/card/[code]': ['./assets/card/**'],
+  },
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }]
   },

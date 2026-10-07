@@ -1,5 +1,7 @@
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import type { BookingDocument, BookingRequestFull, RequestStatus } from '@/lib/types'
+import { checkCode, generateCode } from '@/lib/referrals'
+import { lifetimeSpend, tierFor, type TierKey } from '@/lib/tiers'
 import { isUuid } from '@/lib/validate'
 
 // Typed as plain `string`, not a literal: supabase-js tries to parse a literal select
@@ -126,12 +128,24 @@ export type Profile = {
   contact_email: string | null
   phone: string | null
   telegram_linked: boolean
+  member_since: string | null
+  x: XLink | null
+  referral_code: string | null
+  referred: boolean
+}
+
+export type XLink = {
+  username: string
+  name: string | null
+  avatar_url: string | null
 }
 
 export async function getProfile(userId: string): Promise<Profile> {
   const { data, error } = await supabaseAdmin()
     .from('users')
-    .select('name, contact_email, phone, telegram_chat_id')
+    .select(
+      'name, contact_email, phone, telegram_chat_id, created_at, x_username, x_name, x_avatar_url, referral_code, referred_by',
+    )
     .eq('id', userId)
     .maybeSingle()
   if (error) throw new Error(error.message)
@@ -140,5 +154,156 @@ export async function getProfile(userId: string): Promise<Profile> {
     contact_email: data?.contact_email ?? null,
     phone: data?.phone ?? null,
     telegram_linked: Boolean(data?.telegram_chat_id),
+    member_since: data?.created_at ?? null,
+    x: data?.x_username
+      ? { username: data.x_username, name: data.x_name ?? null, avatar_url: data.x_avatar_url ?? null }
+      : null,
+    referral_code: data?.referral_code ?? null,
+    referred: Boolean(data?.referred_by),
   }
+}
+
+// --- referrals -----------------------------------------------------------------
+
+/**
+ * The member's referral code, created on first use. A unique-index collision on the
+ * random code is retried; another writer setting a code first wins.
+ */
+export async function ensureReferralCode(userId: string, current: string | null): Promise<string> {
+  if (current) return current
+  const db = supabaseAdmin()
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const code = generateCode()
+    const { data, error } = await db
+      .from('users')
+      .update({ referral_code: code })
+      .eq('id', userId)
+      .is('referral_code', null)
+      .select('referral_code')
+      .maybeSingle()
+    if (!error) {
+      if (data?.referral_code) return data.referral_code
+      // Zero rows: someone set it in the meantime. Read theirs.
+      const again = await db.from('users').select('referral_code').eq('id', userId).maybeSingle()
+      if (again.data?.referral_code) return again.data.referral_code
+    } else if (error.code !== '23505') {
+      throw new Error(error.message)
+    }
+  }
+  throw new Error('Could not allocate a referral code.')
+}
+
+export type Referrer = {
+  id: string
+  code: string
+  x: XLink | null
+}
+
+/** The live member behind a code, or null. Anonymised members have no code, so never match. */
+export async function findReferrer(code: string): Promise<Referrer | null> {
+  const checked = checkCode(code)
+  if (!checked.ok) return null
+  const { data, error } = await supabaseAdmin()
+    .from('users')
+    .select('id, referral_code, x_username, x_name, x_avatar_url')
+    .eq('referral_code', checked.code)
+    .is('anonymized_at', null)
+    .maybeSingle()
+  if (error) throw new Error(error.message)
+  if (!data?.referral_code) return null
+  return {
+    id: data.id,
+    code: data.referral_code,
+    x: data.x_username ? { username: data.x_username, name: data.x_name, avatar_url: data.x_avatar_url } : null,
+  }
+}
+
+/** Settled bookings, newest quote each, for a set of members. */
+async function settledByUser(userIds: string[]): Promise<Map<string, { count: number; spend: number }>> {
+  const out = new Map<string, { count: number; spend: number }>()
+  if (userIds.length === 0) return out
+  const { data, error } = await supabaseAdmin()
+    .from('booking_requests')
+    .select('user_id, status, quotes ( amount_usd, created_at )')
+    .in('user_id', userIds)
+    .in('status', ['paid', 'fulfilled'])
+  if (error) throw new Error(error.message)
+
+  for (const row of (data ?? []) as unknown as {
+    user_id: string
+    status: string
+    quotes: { amount_usd: number; created_at: string }[] | null
+  }[]) {
+    const newest = (row.quotes ?? []).sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))[0] ?? null
+    const spend = lifetimeSpend([{ status: row.status, quote: newest }])
+    const entry = out.get(row.user_id) ?? { count: 0, spend: 0 }
+    entry.count += 1
+    entry.spend = Math.round((entry.spend + spend) * 100) / 100
+    out.set(row.user_id, entry)
+  }
+  return out
+}
+
+export type ReferralSummary = {
+  /** Members who joined with this member's code. */
+  introduced: number
+  /** Of those, how many have settled at least one booking. */
+  booked: number
+  /** Settled bookings across everyone introduced. */
+  bookings: number
+  /** Their settled value, in USD. */
+  value: number
+}
+
+export async function getReferralSummary(userId: string): Promise<ReferralSummary> {
+  const { data, error } = await supabaseAdmin().from('users').select('id').eq('referred_by', userId)
+  if (error) throw new Error(error.message)
+  const ids = (data ?? []).map((row) => row.id as string)
+  const settled = await settledByUser(ids)
+  let bookings = 0
+  let value = 0
+  for (const entry of settled.values()) {
+    bookings += entry.count
+    value += entry.spend
+  }
+  return { introduced: ids.length, booked: settled.size, bookings, value: Math.round(value * 100) / 100 }
+}
+
+export type MemberSignal = {
+  tier: TierKey
+  spend: number
+  /** The code and X handle of whoever introduced the member, so the desk knows who to reward. */
+  introducedBy: { code: string | null; x_username: string | null } | null
+}
+
+/** Tier and referrer for each member on the desk. */
+export async function getMemberSignals(userIds: string[]): Promise<Map<string, MemberSignal>> {
+  const ids = [...new Set(userIds)]
+  const out = new Map<string, MemberSignal>()
+  if (ids.length === 0) return out
+  const db = supabaseAdmin()
+
+  const [settled, members] = await Promise.all([
+    settledByUser(ids),
+    db.from('users').select('id, referred_by').in('id', ids),
+  ])
+  if (members.error) throw new Error(members.error.message)
+
+  const referrerIds = [...new Set((members.data ?? []).map((row) => row.referred_by as string | null).filter(Boolean))] as string[]
+  const referrers = new Map<string, { code: string | null; x_username: string | null }>()
+  if (referrerIds.length > 0) {
+    const { data, error } = await db.from('users').select('id, referral_code, x_username').in('id', referrerIds)
+    if (error) throw new Error(error.message)
+    for (const row of data ?? []) referrers.set(row.id, { code: row.referral_code, x_username: row.x_username })
+  }
+
+  for (const row of members.data ?? []) {
+    const spend = settled.get(row.id)?.spend ?? 0
+    out.set(row.id, {
+      tier: tierFor(spend).key,
+      spend,
+      introducedBy: row.referred_by ? (referrers.get(row.referred_by) ?? { code: null, x_username: null }) : null,
+    })
+  }
+  return out
 }

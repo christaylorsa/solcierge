@@ -4,7 +4,7 @@ import { AdminRequestCard } from '@/components/admin/AdminRequestCard'
 import { SignedOutPanel } from '@/components/account/SignedOutPanel'
 import { Section, SectionHead } from '@/components/site/Section'
 import { getViewer } from '@/lib/auth'
-import { countByStatus, listAllRequests } from '@/lib/data'
+import { countByStatus, getMemberSignals, listAllRequests, type MemberSignal } from '@/lib/data'
 import { getManifests, type Manifest } from '@/lib/manifests'
 import { REQUEST_STATUSES, isRequestStatus, type RequestStatus } from '@/lib/types'
 import { STATUS_COPY } from '@/lib/format'
@@ -50,13 +50,17 @@ export default async function AdminPage({
   let requests: Awaited<ReturnType<typeof listAllRequests>> = []
   let counts: Record<RequestStatus, number> | null = null
   let manifests = new Map<string, Manifest>()
+  let signals = new Map<string, MemberSignal>()
   let loadError: string | null = null
 
   try {
     ;[requests, counts] = await Promise.all([listAllRequests(filter), countByStatus()])
-    manifests = await getManifests(
-      requests.filter((r) => r.category === 'jets' && (r.status === 'paid' || r.status === 'fulfilled')).map((r) => r.id),
-    )
+    ;[manifests, signals] = await Promise.all([
+      getManifests(
+        requests.filter((r) => r.category === 'jets' && (r.status === 'paid' || r.status === 'fulfilled')).map((r) => r.id),
+      ),
+      getMemberSignals(requests.map((r) => r.user_id)),
+    ])
   } catch (error) {
     loadError = error instanceof Error ? error.message : 'Could not load the desk.'
   }
@@ -98,7 +102,12 @@ export default async function AdminPage({
           ) : (
             <div className="mt-10 space-y-4">
               {requests.map((request) => (
-                <AdminRequestCard key={request.id} request={request} manifest={manifests.get(request.id) ?? null} />
+                <AdminRequestCard
+                  key={request.id}
+                  request={request}
+                  manifest={manifests.get(request.id) ?? null}
+                  signal={signals.get(request.user_id) ?? null}
+                />
               ))}
             </div>
           )}

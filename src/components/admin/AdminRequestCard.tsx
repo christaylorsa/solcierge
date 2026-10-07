@@ -10,6 +10,8 @@ import { StatusPill } from '@/components/account/StatusPill'
 import { categoryName } from '@/lib/categories'
 import { explorerTxUrl } from '@/lib/env'
 import { formatDateTime, relativeTime, shortAddress, sol, usd, usdc } from '@/lib/format'
+import type { MemberSignal } from '@/lib/data'
+import { TIERS } from '@/lib/tiers'
 import type { BookingRequestFull, RequestStatus } from '@/lib/types'
 
 /** Mirrors the transitions the API allows, so the UI never offers a move the server rejects. */
@@ -27,7 +29,16 @@ const NEXT: Record<RequestStatus, { status: RequestStatus; label: string }[]> = 
   cancelled: [{ status: 'pending', label: 'Reopen' }],
 }
 
-export function AdminRequestCard({ request, manifest }: { request: BookingRequestFull; manifest: ManifestView | null }) {
+export function AdminRequestCard({
+  request,
+  manifest,
+  signal,
+}: {
+  request: BookingRequestFull
+  manifest: ManifestView | null
+  /** The member's tier and who introduced them, so the desk knows who to look after and who to reward. */
+  signal: MemberSignal | null
+}) {
   const router = useRouter()
   const [open, setOpen] = useState(request.status === 'pending' || request.status === 'paid')
   const [busy, setBusy] = useState<RequestStatus | null>(null)
@@ -98,6 +109,26 @@ export function AdminRequestCard({ request, manifest }: { request: BookingReques
             {relativeTime(request.created_at)}
             {memberReach.telegram ? ' · Telegram linked' : ''}
           </p>
+          {signal && (signal.tier !== 'member' || signal.introducedBy) ? (
+            <p className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-xs">
+              {signal.tier !== 'member' ? (
+                <span className="text-accent-soft">
+                  {TIERS.find((tier) => tier.key === signal.tier)?.name} · {usd(signal.spend)} lifetime
+                </span>
+              ) : null}
+              {signal.introducedBy ? (
+                <span className="text-muted">
+                  Introduced by{' '}
+                  {signal.introducedBy.x_username
+                    ? `@${signal.introducedBy.x_username}`
+                    : (signal.introducedBy.code?.toUpperCase() ?? 'a former member')}
+                  {signal.introducedBy.x_username && signal.introducedBy.code
+                    ? ` (${signal.introducedBy.code.toUpperCase()})`
+                    : ''}
+                </span>
+              ) : null}
+            </p>
+          ) : null}
         </div>
 
         <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs">

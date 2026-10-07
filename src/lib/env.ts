@@ -82,6 +82,9 @@ export function serverEnv() {
     resendApiKey: process.env.RESEND_API_KEY ?? '',
     alertEmails: list('ALERT_EMAILS'),
     alertFrom: process.env.ALERT_FROM || 'Solcierge Desk <desk@solcierge.xyz>',
+    // Optional. Without both, the "Connect X" button says it is not switched on yet.
+    xClientId: process.env.X_CLIENT_ID ?? '',
+    xClientSecret: process.env.X_CLIENT_SECRET ?? '',
   }
 }
 

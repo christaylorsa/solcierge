@@ -1,7 +1,8 @@
 import { SignJWT, jwtVerify, type JWTPayload } from 'jose'
 
 /**
- * The two signed tokens the app issues, sign-in challenges and sessions, share one
+ * The signed tokens the app issues (sessions, sign-in challenges, the X connect
+ * round trip) share one
  * secret. Each carries its own audience, so neither can ever be presented as the
  * other, and verification accepts HS256 only (SA-13). Free of app imports so it is
  * unit-tested directly.
@@ -11,6 +12,7 @@ export const MIN_SECRET_LENGTH = 32
 const AUDIENCE = {
   session: 'solcierge:session',
   'siws-nonce': 'solcierge:siws-nonce',
+  'x-oauth': 'solcierge:x-oauth',
 } as const
 
 export type TokenKind = keyof typeof AUDIENCE

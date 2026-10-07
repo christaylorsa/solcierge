@@ -1,4 +1,7 @@
+import { cookies } from 'next/headers'
 import { isAdminIdentity } from '@/lib/admin'
+import { findReferrer } from '@/lib/data'
+import { REFERRAL_COOKIE } from '@/lib/referrals'
 import { serverEnv } from '@/lib/env'
 import { readWalletSession } from '@/lib/session'
 import { supabaseAdmin } from '@/lib/supabase/admin'
@@ -116,6 +119,7 @@ export async function upsertUserByWallet(wallet: string) {
     .select(USER_COLUMNS)
     .single()
 
+  if (!created.error) await attributeReferral(created.data.id)
   if (created.error) {
     // Lost a race against a concurrent sign-in. Read the winner's row.
     const retry = await db
@@ -146,6 +150,7 @@ export async function upsertUserByEmail(email: string) {
     .select(USER_COLUMNS)
     .single()
 
+  if (!created.error) await attributeReferral(created.data.id)
   if (created.error) {
     const retry = await db
       .from('users')
@@ -155,4 +160,26 @@ export async function upsertUserByEmail(email: string) {
     return retry.data
   }
   return created.data
+}
+
+/**
+ * Links a brand-new account to whoever shared the link it arrived through. The
+ * middleware left the code in a cookie on /r/<code>. Only ever runs at account
+ * creation, so an existing member cannot be re-attributed by visiting a link, and it
+ * never blocks sign-in: a bad or stale code is simply ignored.
+ */
+async function attributeReferral(userId: string): Promise<void> {
+  try {
+    const raw = (await cookies()).get(REFERRAL_COOKIE)?.value
+    if (!raw) return
+    const referrer = await findReferrer(raw)
+    if (!referrer || referrer.id === userId) return
+    await supabaseAdmin()
+      .from('users')
+      .update({ referred_by: referrer.id, referred_at: new Date().toISOString() })
+      .eq('id', userId)
+      .is('referred_by', null)
+  } catch (error) {
+    console.error('[solcierge] referral attribution skipped:', error)
+  }
 }
