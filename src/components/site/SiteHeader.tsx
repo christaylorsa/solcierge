@@ -8,6 +8,7 @@ import { CATEGORIES } from '@/lib/categories'
 
 const NAV = [
   { href: '/request', label: 'Request' },
+  { href: '/experiences', label: 'Experiences' },
   { href: '/#how', label: 'How it works' },
   { href: '/#pay', label: 'Paying in crypto' },
   { href: '/account', label: 'My bookings' },

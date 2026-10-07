@@ -37,6 +37,14 @@ export default function RequestIndexPage() {
           </Link>
         ))}
       </Stagger>
+
+      <p className="mt-10 text-sm leading-relaxed text-muted">
+        Want the whole trip planned, not one part of it?{' '}
+        <Link href="/experiences" className="link-underline">
+          See Solcierge Experiences
+        </Link>
+        .
+      </p>
     </Section>
   )
 }

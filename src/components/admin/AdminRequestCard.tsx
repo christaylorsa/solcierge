@@ -7,7 +7,7 @@ import { PassengerManifest, type ManifestView } from './PassengerManifest'
 import { QuoteEditor } from './QuoteEditor'
 import { RequestDetails } from '@/components/account/RequestDetails'
 import { StatusPill } from '@/components/account/StatusPill'
-import { categoryName } from '@/lib/categories'
+import { requestTitle } from '@/lib/categories'
 import { explorerTxUrl } from '@/lib/env'
 import { formatDateTime, relativeTime, shortAddress, sol, usd, usdc } from '@/lib/format'
 import type { MemberSignal } from '@/lib/data'
@@ -92,7 +92,7 @@ export function AdminRequestCard({
       <div className="grid gap-4 p-5 md:grid-cols-[1.5fr_1fr_auto] md:items-start md:gap-8 md:p-6">
         <div>
           <div className="flex flex-wrap items-center gap-3">
-            <p className="eyebrow">{categoryName(request.category)}</p>
+            <p className="eyebrow">{requestTitle(request.category, request.details)}</p>
             <StatusPill status={request.status} />
           </div>
 
@@ -293,5 +293,5 @@ function headline(request: BookingRequestFull): string {
   const d = request.details ?? {}
   if (d.origin && d.destination) return `${d.origin} to ${d.destination}`
   if (d.location) return d.location
-  return categoryName(request.category)
+  return requestTitle(request.category, d)
 }

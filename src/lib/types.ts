@@ -9,6 +9,7 @@ export const CATEGORY_SLUGS = [
   'dining',
   'events',
   'bespoke',
+  'experiences',
 ] as const
 export type CategorySlug = (typeof CATEGORY_SLUGS)[number]
 
@@ -24,6 +25,8 @@ export type RequestDetails = {
   trip?: 'one_way' | 'return'
   party_size?: number
   details?: string
+  /** Experiences only: the slug from experiences.ts the member asked for. */
+  experience?: string
   /** Typed by the member and unverified. Never copied to users.email (SA-02). */
   contact_name?: string
   contact_email?: string

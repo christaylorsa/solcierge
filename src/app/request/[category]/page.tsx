@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { Reveal } from '@/components/motion/Reveal'
 import { RequestForm } from '@/components/request/RequestForm'
 import { AIR_CHARTER_BROKER_STATEMENT, CATEGORIES, CATEGORY_BY_SLUG } from '@/lib/categories'
@@ -28,6 +28,8 @@ export default async function CategoryRequestPage({
 }) {
   const { category: slug } = await params
   if (!isCategorySlug(slug)) notFound()
+  // Experiences are requested from their own pages, which carry the experience.
+  if (slug === 'experiences') redirect('/experiences')
   const category = CATEGORY_BY_SLUG[slug]
 
   return (

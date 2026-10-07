@@ -9,6 +9,7 @@ import { AirportInput } from './AirportInput'
 import { LocationPicker } from './LocationPicker'
 import { isPlaceCategory, type PlaceCategory } from '@/lib/places'
 import type { Category } from '@/lib/categories'
+import type { Experience } from '@/lib/experiences'
 
 type Values = {
   origin: string
@@ -40,7 +41,8 @@ const EMPTY: Values = {
 
 const MIN_DETAILS = 20
 
-export function RequestForm({ category }: { category: Category }) {
+/** With `experience`, the brief is for that experience: its bases replace the place search. */
+export function RequestForm({ category, experience }: { category: Category; experience?: Experience }) {
   const { viewer, loaded } = useSession()
   const { setVisible } = useWalletModal()
   const router = useRouter()
@@ -114,6 +116,7 @@ export function RequestForm({ category }: { category: Category }) {
           start_date: values.start_date || undefined,
           end_date: wantsEndDate ? values.end_date || undefined : undefined,
           trip: isFlight ? (returnFlight ? 'return' : 'one_way') : undefined,
+          experience: experience?.slug,
           party_size: has('party_size') && values.party_size ? Number(values.party_size) : undefined,
           budget_min: values.budget_min ? Number(values.budget_min) : undefined,
           budget_max: values.budget_max ? Number(values.budget_max) : undefined,
@@ -152,7 +155,9 @@ export function RequestForm({ category }: { category: Category }) {
           </div>
         ) : null}
 
-        {has('location') && isPlaceCategory(category.slug) ? (
+        {experience ? (
+          <BasePicker bases={experience.bases} value={values.location} onChange={setValue('location')} />
+        ) : has('location') && isPlaceCategory(category.slug) ? (
           <LocationPicker
             category={category.slug}
             value={values.location}
@@ -259,7 +264,7 @@ export function RequestForm({ category }: { category: Category }) {
             className="field min-h-[10rem] resize-y leading-relaxed"
             value={values.details}
             onChange={set('details')}
-            placeholder={category.detailsPrompt}
+            placeholder={experience?.briefPrompt ?? category.detailsPrompt}
             aria-invalid={field === 'details'}
             required
           />
@@ -336,6 +341,60 @@ function Field({
       {children}
       {hint ? <span className="mt-2 block text-xs text-faint">{hint}</span> : null}
     </label>
+  )
+}
+
+/**
+ * Where an experience is based. The experience's own bases as one-click picks, plus
+ * a free box for anything else, since "wherever the snow is best" is a fine answer.
+ */
+function BasePicker({
+  bases,
+  value,
+  onChange,
+}: {
+  bases: string[]
+  value: string
+  onChange: (value: string) => void
+}) {
+  return (
+    <div>
+      <span className="field-label">Where you would like to be</span>
+      <div className="mb-3 flex flex-wrap gap-2" role="group" aria-label="Suggested bases">
+        {bases.map((base) => {
+          const selected = value === base
+          return (
+            <button
+              key={base}
+              type="button"
+              aria-pressed={selected}
+              onClick={() => onChange(selected ? '' : base)}
+              className={`inline-flex items-center gap-1.5 border px-3 py-1.5 text-xs tracking-wide transition-colors duration-300 ease ${
+                selected
+                  ? 'border-accent bg-accent/10 text-accent-soft'
+                  : 'border-line text-muted hover:border-accent/50 hover:text-ink'
+              }`}
+            >
+              {selected ? (
+                <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
+                  <path d="M1.5 5.2l2.2 2.2L8.5 2.6" stroke="currentColor" strokeWidth="1.3" fill="none" />
+                </svg>
+              ) : null}
+              {base}
+            </button>
+          )
+        })}
+      </div>
+      <input
+        className="field"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        maxLength={160}
+        placeholder="Or somewhere else, or leave it to us"
+        aria-label="Where you would like to be"
+      />
+      <span className="mt-2 block text-xs text-faint">Not sure yet? Leave it blank and we will suggest the best fit.</span>
+    </div>
   )
 }
 

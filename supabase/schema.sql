@@ -19,6 +19,9 @@ exception when duplicate_object then null; end $$;
 do $$ begin
   create type request_category as enum ('jets', 'yachts', 'villas', 'cars', 'dining', 'events', 'bespoke');
 exception when duplicate_object then null; end $$;
+-- Added after launch, so it is appended rather than written into the list above:
+-- an existing database only ever gains it this way.
+alter type request_category add value if not exists 'experiences';
 
 do $$ begin
   create type intent_status as enum ('open', 'expired', 'consumed');

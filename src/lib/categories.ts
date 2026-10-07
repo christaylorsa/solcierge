@@ -1,4 +1,5 @@
-import type { CategorySlug } from './types'
+import { experienceName } from './experiences'
+import type { CategorySlug, RequestDetails } from './types'
 
 export type CategoryField =
   | 'route'
@@ -136,7 +137,27 @@ export const CATEGORIES: Category[] = [
   },
 ]
 
-export const CATEGORY_BY_SLUG: Record<CategorySlug, Category> = CATEGORIES.reduce(
+/**
+ * Whole journeys, requested from an experience page rather than a category tile, so
+ * it is kept out of CATEGORIES (the tiles, the nav and /request). It still has a
+ * category so the desk, the member's bookings and the alerts can name it.
+ */
+export const EXPERIENCES_CATEGORY: Category = {
+  slug: 'experiences',
+  name: 'Experiences',
+  tagline: 'Whole journeys, planned end to end',
+  intro:
+    'Flights, transfers, where you sleep, what you eat, who guides you, and the days left deliberately empty. One desk plans all of it around you.',
+  leadTime: 'A first outline within two days, then we refine it with you until it is right.',
+  typical: 'Price on request. Every experience is costed to your dates, your group and your taste.',
+  fields: ['location', 'dates', 'party_size'],
+  detailsPrompt: 'Who is travelling, what the trip is for, and what would make it unforgettable.',
+  asks: ['Your dates, or the season', 'Everyone travelling, and their ages', 'What the trip is for'],
+  image: '/media/experiences/safari.jpg',
+  imageAlt: 'A leopard drinking at a waterhole in low golden light',
+}
+
+export const CATEGORY_BY_SLUG: Record<CategorySlug, Category> = [...CATEGORIES, EXPERIENCES_CATEGORY].reduce(
   (acc, category) => {
     acc[category.slug] = category
     return acc
@@ -154,4 +175,9 @@ export const AIR_CHARTER_BROKER_STATEMENT =
 
 export function categoryName(slug: string): string {
   return CATEGORY_BY_SLUG[slug as CategorySlug]?.name ?? slug
+}
+
+/** What to call a request: the experience when there is one, otherwise the category. */
+export function requestTitle(category: string, details: RequestDetails | null | undefined): string {
+  return experienceName(details?.experience) ?? categoryName(category)
 }

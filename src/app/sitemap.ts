@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next'
 import { CATEGORIES } from '@/lib/categories'
+import { EXPERIENCES } from '@/lib/experiences'
 import { publicEnv } from '@/lib/env'
 
 const LEGAL_SLUGS = ['concierge-terms', 'crypto-risk', 'refunds', 'privacy']
@@ -11,6 +12,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: url('/request'), changeFrequency: 'monthly', priority: 0.8 },
     ...CATEGORIES.map((category) => ({
       url: url(`/request/${category.slug}`),
+      changeFrequency: 'monthly' as const,
+      priority: 0.7,
+    })),
+    { url: url('/experiences'), changeFrequency: 'monthly', priority: 0.8 },
+    ...EXPERIENCES.map((experience) => ({
+      url: url(`/experiences/${experience.slug}`),
       changeFrequency: 'monthly' as const,
       priority: 0.7,
     })),

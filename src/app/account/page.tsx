@@ -7,7 +7,7 @@ import { Section, SectionHead } from '@/components/site/Section'
 import { getViewer } from '@/lib/auth'
 import { hasTelegramLinked, listRequestsForUser } from '@/lib/data'
 import { TelegramConnect } from '@/components/account/TelegramConnect'
-import { categoryName } from '@/lib/categories'
+import { requestTitle } from '@/lib/categories'
 import { budgetRange, dateWindow, formatDate, relativeTime, shortAddress, usd } from '@/lib/format'
 import type { BookingRequestFull } from '@/lib/types'
 
@@ -109,7 +109,7 @@ function Group({ title, requests }: { title: string; requests: BookingRequestFul
             >
               <div>
                 <div className="flex flex-wrap items-center gap-3">
-                  <p className="eyebrow">{categoryName(request.category)}</p>
+                  <p className="eyebrow">{requestTitle(request.category, request.details)}</p>
                   <StatusPill status={request.status} />
                 </div>
                 <p className="display mt-2.5 text-xl text-ink md:text-2xl">
@@ -158,5 +158,5 @@ function headline(request: BookingRequestFull): string {
   if (d.origin && d.destination) return `${d.origin} to ${d.destination}`
   if (d.location) return d.location
   if (d.start_date) return formatDate(d.start_date)
-  return categoryName(request.category)
+  return requestTitle(request.category, d)
 }

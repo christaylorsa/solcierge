@@ -14,7 +14,7 @@ import { getViewer } from '@/lib/auth'
 import { getRequest, hasTelegramLinked } from '@/lib/data'
 import { getManifest } from '@/lib/manifests'
 import { lastTravelDate } from '@/lib/passengers'
-import { categoryName } from '@/lib/categories'
+import { requestTitle } from '@/lib/categories'
 import { explorerTxUrl } from '@/lib/env'
 import { STATUS_COPY, formatDateTime, relativeTime, shortAddress, sol, usd, usdc } from '@/lib/format'
 
@@ -61,7 +61,7 @@ export default async function RequestPage({
           My bookings
         </Link>
         <span aria-hidden="true">/</span>
-        <span className="text-muted">{categoryName(request.category)}</span>
+        <span className="text-muted">{requestTitle(request.category, request.details)}</span>
       </nav>
 
       {query.new ? (
@@ -75,7 +75,7 @@ export default async function RequestPage({
 
       <div className="mt-8 flex flex-wrap items-center gap-4">
         <h1 className="display text-[clamp(2rem,5vw,3.25rem)] text-ink">
-          {categoryName(request.category)}
+          {requestTitle(request.category, request.details)}
         </h1>
         <StatusPill status={request.status} />
       </div>

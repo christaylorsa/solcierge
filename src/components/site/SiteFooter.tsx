@@ -62,6 +62,14 @@ export function SiteFooter() {
                   </Link>
                 </li>
               ))}
+              <li>
+                <Link
+                  href="/experiences"
+                  className="text-sm text-muted transition-colors duration-300 ease hover:text-accent-soft"
+                >
+                  Experiences
+                </Link>
+              </li>
             </ul>
           </nav>
 

@@ -6,6 +6,7 @@ import { contactRecord } from '@/lib/contact'
 import { listRequestsForUser } from '@/lib/data'
 import { notifyNewRequest } from '@/lib/notify'
 import { supabaseAdmin } from '@/lib/supabase/admin'
+import { EXPERIENCE_SLUGS } from '@/lib/experiences'
 import { CATEGORY_SLUGS } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
@@ -25,6 +26,7 @@ const schema = z
     start_date: optionalDate,
     end_date: optionalDate,
     trip: z.enum(['one_way', 'return']).optional(),
+    experience: z.enum(EXPERIENCE_SLUGS).optional(),
     party_size: z.coerce.number().int().min(1).max(500).optional(),
     budget_min: z.coerce.number().min(0).max(100_000_000).optional(),
     budget_max: z.coerce.number().min(0).max(100_000_000).optional(),
@@ -40,6 +42,11 @@ const schema = z
     (value) => !value.start_date || !value.end_date || value.end_date >= value.start_date,
     { message: 'The end date falls before the start date.', path: ['end_date'] },
   )
+  // An experience request always names its experience, and nothing else carries one.
+  .refine((value) => (value.category === 'experiences') === Boolean(value.experience), {
+    message: 'Pick an experience from the Experiences page.',
+    path: ['experience'],
+  })
 
 export async function GET() {
   try {

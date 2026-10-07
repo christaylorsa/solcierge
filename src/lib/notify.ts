@@ -8,7 +8,7 @@
  * never slows down or fails the request that triggered it.
  */
 
-import { categoryName } from '@/lib/categories'
+import { requestTitle } from '@/lib/categories'
 import { explorerTxUrl, publicEnv, serverEnv } from '@/lib/env'
 import { budgetRange, dateWindow, formatDate, formatDateTime, usd } from '@/lib/format'
 import { supabaseAdmin } from '@/lib/supabase/admin'
@@ -119,7 +119,7 @@ export async function notifyNewRequest(input: {
   const who = [input.member.name, input.member.email, shortWallet(input.member.wallet)].filter(Boolean).join(' · ')
 
   await send({
-    title: `New request: ${categoryName(input.category)}`,
+    title: `New request: ${requestTitle(input.category, d)}`,
     lines: [
       ...describeRoute(d),
       [d.party_size ? `${d.party_size} guests` : null, `Budget ${budgetRange(input.budgetMin, input.budgetMax)}`]
@@ -152,7 +152,7 @@ export async function notifyPayment(input: {
   const usdAmount = Number(input.amountUsd).toLocaleString('en-US', { style: 'currency', currency: 'USD' })
   const title = input.review
     ? `Payment needs review: ${usdAmount}`
-    : `Paid: ${usdAmount}${data ? ` for ${categoryName(data.category)}` : ''}`
+    : `Paid: ${usdAmount}${data ? ` for ${requestTitle(data.category, data.details as RequestDetails)}` : ''}`
 
   await send({
     title,
@@ -174,9 +174,9 @@ export type Delivery = { telegram: boolean; email: boolean }
 
 /** A one-line label for a booking, built from whatever the member gave us. */
 function bookingHeadline(category: string, d: RequestDetails): string {
-  if (d.origin && d.destination) return `${categoryName(category)}: ${d.origin} to ${d.destination}`
-  if (d.location) return `${categoryName(category)}: ${d.location}`
-  return categoryName(category)
+  if (d.origin && d.destination) return `${requestTitle(category, d)}: ${d.origin} to ${d.destination}`
+  if (d.location) return `${requestTitle(category, d)}: ${d.location}`
+  return requestTitle(category, d)
 }
 
 /**

@@ -1,5 +1,6 @@
 import { Hero } from '@/components/landing/Hero'
 import { CategoryTiles } from '@/components/landing/CategoryTiles'
+import { Experiences } from '@/components/landing/Experiences'
 import { HowItWorks } from '@/components/landing/HowItWorks'
 import { CryptoRails } from '@/components/landing/CryptoRails'
 import { ClosingCta } from '@/components/landing/ClosingCta'
@@ -10,6 +11,7 @@ export default function LandingPage() {
     <>
       <Hero />
       <CategoryTiles />
+      <Experiences />
       <HowItWorks />
       <CryptoRails />
       <ClosingCta />

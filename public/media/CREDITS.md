@@ -9,7 +9,9 @@ Nothing here is from the paid Unsplash+ tier (`plus.unsplash.com` / `premium_pho
 which carries a different licence and is not free to ship.
 
 All files were fetched through the Unsplash CDN with `q=72-74&fm=jpg&fit=crop`, sized to
-1600x1067 for category art and 1920x1200 for hero frames. Largest file is under 450KB.
+1600x1067 for category art and 1920x1200 for hero frames. Experience heroes are
+1920x1200 and their second photographs 1600x1067; the safari hero was
+re-encoded once more locally to stay under 400KB. Largest file is under 450KB.
 
 | File | Source |
 | --- | --- |
@@ -23,6 +25,18 @@ All files were fetched through the Unsplash CDN with `q=72-74&fm=jpg&fit=crop`, 
 | `hero-1.jpg` | https://images.unsplash.com/photo-1474302770737-173ee21bab63 |
 | `hero-2.jpg` | https://images.unsplash.com/photo-1562281302-809108fd533c |
 | `hero-3.jpg` | https://images.unsplash.com/photo-1678889284769-b7dcbec1f082 |
+| `experiences/safari.jpg` | https://images.unsplash.com/photo-1707862358204-55079a47994d |
+| `experiences/safari-2.jpg` | https://images.unsplash.com/photo-1781039869379-5561fe260d26 |
+| `experiences/cape-town.jpg` | https://images.unsplash.com/photo-1515825452884-0de18ec8d031 |
+| `experiences/cape-town-2.jpg` | https://images.unsplash.com/photo-1519941459598-a1588781b56e |
+| `experiences/bali.jpg` | https://images.unsplash.com/photo-1690476703929-0718aba7a511 |
+| `experiences/bali-2.jpg` | https://images.unsplash.com/photo-1599579258216-342826d20033 |
+| `experiences/maldives.jpg` | https://images.unsplash.com/photo-1544473243-618f55d06792 |
+| `experiences/maldives-2.jpg` | https://images.unsplash.com/photo-1674718061623-2d1902f6889d |
+| `experiences/swiss-alps.jpg` | https://images.unsplash.com/photo-1535224206242-487f7090b5bb |
+| `experiences/swiss-alps-2.jpg` | https://images.unsplash.com/photo-1735682685547-629d793e1e51 |
+| `experiences/arctic.jpg` | https://images.unsplash.com/photo-1519227778781-02fbc3c547a6 |
+| `experiences/arctic-2.jpg` | https://images.unsplash.com/photo-1531366936337-7c912a4589a7 |
 
 ## Hero video
 
