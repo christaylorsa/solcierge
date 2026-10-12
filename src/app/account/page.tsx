@@ -70,8 +70,8 @@ export default async function AccountPage() {
         <div className="mt-12 border border-line bg-surface p-8">
           <p className="display text-2xl text-ink">Nothing on the desk yet</p>
           <p className="mt-3 max-w-prose text-sm leading-relaxed text-muted">
-            Pick a category and tell us what you want. First quotes usually come back within
-            ninety minutes, and there is no fee to ask.
+            Pick a category and tell us what you want. We aim to send a first quote within
+            ninety minutes during desk hours, and there is no fee to ask.
           </p>
           <Link href="/request" className="btn btn-ghost mt-7">
             Make your first request

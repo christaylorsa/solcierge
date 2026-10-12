@@ -26,7 +26,7 @@ export function EmailSignIn() {
         email: email.trim(),
         options: { emailRedirectTo: `${publicEnv.siteUrl}/auth/callback?next=/account` },
       })
-      if (error) throw new Error(error.message)
+      if (error) throw new Error(friendlyError(error.message))
       setStatus('sent')
       setMessage('Check your inbox. The link signs you straight in and expires in an hour.')
     } catch (cause) {
@@ -78,4 +78,18 @@ export function EmailSignIn() {
       </p>
     </form>
   )
+}
+
+/**
+ * Supabase's raw errors read like server logs. Delivery refusals (an address the mail
+ * provider will not send to, or its hourly cap) point the visitor at the wallet route,
+ * which needs no email at all.
+ */
+function friendlyError(raw: string): string {
+  const text = raw.toLowerCase()
+  if (text.includes('invalid')) return 'That email address does not look right. Check it and try again.'
+  if (text.includes('not authorized') || text.includes('rate limit') || text.includes('security purposes')) {
+    return 'We could not send a link just now. Connect a wallet instead: it takes a few seconds and needs no email.'
+  }
+  return raw
 }

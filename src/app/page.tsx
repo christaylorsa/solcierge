@@ -4,7 +4,6 @@ import { Experiences } from '@/components/landing/Experiences'
 import { HowItWorks } from '@/components/landing/HowItWorks'
 import { CryptoRails } from '@/components/landing/CryptoRails'
 import { ClosingCta } from '@/components/landing/ClosingCta'
-import { MembershipInvite } from '@/components/site/MembershipInvite'
 
 export default function LandingPage() {
   return (
@@ -15,7 +14,6 @@ export default function LandingPage() {
       <HowItWorks />
       <CryptoRails />
       <ClosingCta />
-      <MembershipInvite />
     </>
   )
 }

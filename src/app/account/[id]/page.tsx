@@ -194,7 +194,7 @@ export default async function RequestPage({
               </p>
               {request.status === 'pending' ? (
                 <p className="mt-6 text-xs leading-relaxed text-faint">
-                  Most quotes land inside ninety minutes during desk hours. If the request is
+                  We aim to quote within ninety minutes during desk hours. If the request is
                   unusual, expect a question from us before a number.
                 </p>
               ) : null}

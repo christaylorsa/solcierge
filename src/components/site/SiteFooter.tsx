@@ -98,7 +98,7 @@ export function SiteFooter() {
             on the countdown. Nothing here is investment advice.
           </p>
           <p className="mt-6 text-xs text-faint">
-            © {new Date().getFullYear()} Solcierge. Placeholder legal pages, pending counsel review.
+            © {new Date().getFullYear()} Solcierge. Legal terms in draft.
           </p>
         </div>
       </div>
