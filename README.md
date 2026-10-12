@@ -68,8 +68,27 @@ live mainnet product during the hackathon:
   when a quote lands, when a booking is confirmed, and when the desk sends a note.
 - **Passenger details for flights:** collected after payment, sealed with AES-GCM before they reach
   the database, and deleted automatically 30 days after travel, or at once on cancellation.
+- **Member profile and spend tiers:** name, contact email and phone at `/account/profile`, and three
+  tiers (Member, Reserve, Black) worked out from settled bookings (`src/lib/tiers.ts`), each with
+  its own membership card. Shareable surfaces never show a member's name, tier or spend, so they
+  cannot reveal who holds money.
+- **Referrals and share cards:** every member gets an introduction link (`/r/<code>`) and a share
+  card image rendered at `/card/<code>` with `next/og`. The desk sees who introduced whom.
+- **Optional X link:** OAuth 2.0 with PKCE, used only to read the member's handle. The token is
+  revoked straight after that one read, and X is never a way to sign in.
+- **Experiences:** 24 curated end-to-end journeys, six in each of four regions (Africa, Europe & UK,
+  Asia, Americas), at `/experiences`. Each page opens a pre-filled brief. Prices are on request by
+  design, and a test keeps prices and dates out of the data.
+- **Location picker** on every non-jet request form: one-click chips for the usual destinations,
+  plus search across curated places and the world's cities (`src/lib/places.ts`).
+- **Speed:** `npm run photos` writes right-sized AVIF and WebP copies of every photograph, so the
+  first view of `/experiences` went from 2.75 MB to about 150 KB.
+- **One host:** `www.solcierge.xyz` redirects to the bare domain, so sign-in links and the X
+  callback always return to the domain that holds the member's session.
 - **Fixes found in production:** a server crash from an ESM-only transitive dependency on Vercel's
   runtime (pinned via `overrides`), and browser RPC calls that mainnet's public endpoint refuses.
+
+The test suite now stands at 135, all run with `npm test`.
 
 ---
 
