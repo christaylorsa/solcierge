@@ -26,3 +26,20 @@ export function isCrossSiteWrite(input: {
   }
   return false
 }
+
+/**
+ * One host for the whole site. www.solcierge.xyz used to serve the site as well, but every
+ * round trip that leaves and comes back (X's OAuth callback, email sign-in links, document
+ * downloads) returns to the configured site URL, which is the bare domain, where a www
+ * visitor's session and OAuth cookies do not exist. Takes the Host header (request.url
+ * does not always carry it) and returns the bare-domain URL to redirect to, or null when
+ * the request is already on a canonical host.
+ */
+export function canonicalRedirect(host: string | null, requestUrl: string): string | null {
+  if (!host || !host.toLowerCase().startsWith('www.')) return null
+  const url = new URL(requestUrl)
+  const [hostname, port] = host.slice('www.'.length).split(':')
+  url.hostname = hostname
+  url.port = port ?? '' // setting only the hostname would keep an internal port
+  return url.toString()
+}

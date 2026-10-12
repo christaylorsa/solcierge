@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
-import { isCrossSiteWrite } from '@/lib/origin'
+import { canonicalRedirect, isCrossSiteWrite } from '@/lib/origin'
 import { CODE_IN_PATH, REFERRAL_COOKIE, REFERRAL_COOKIE_MAX_AGE } from '@/lib/referrals'
 
 /**
@@ -14,6 +14,10 @@ import { CODE_IN_PATH, REFERRAL_COOKIE, REFERRAL_COOKIE_MAX_AGE } from '@/lib/re
  * expiry and no refresh step.
  */
 export async function middleware(request: NextRequest) {
+  // One host: www would strand X connect and email sign-in on the other domain.
+  const canonical = canonicalRedirect(request.headers.get('host'), request.url)
+  if (canonical) return NextResponse.redirect(canonical, 308)
+
   // CSRF backstop: refuse state-changing API calls the browser marks as cross-origin.
   if (
     request.nextUrl.pathname.startsWith('/api/') &&
