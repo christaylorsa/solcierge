@@ -22,3 +22,5 @@ next-env.d.ts
 .claude
 # Internal legal analysis, not for a public repo.
 legal-review/
+Solcierge Brand Film/
+/*.mp3
